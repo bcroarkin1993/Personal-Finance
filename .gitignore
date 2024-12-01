@@ -1,0 +1,22 @@
+# Ignore personal financial data files
+data/excel_data.xlsx
+data/stock_purchase_dictionary.json
+
+# Ignore virtual environment
+venv/
+
+# Ignore Streamlit temporary files
+.streamlit/
+
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore log files
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
