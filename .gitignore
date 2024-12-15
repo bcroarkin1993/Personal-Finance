@@ -1,6 +1,8 @@
 # Ignore personal financial data files
-data/excel_data.xlsx
-data/stock_purchase_dictionary.json
+app/data/*
+
+# Ignore password data
+app/config/config.ini
 
 # Ignore virtual environment
 venv/
