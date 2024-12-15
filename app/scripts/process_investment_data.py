@@ -1,4 +1,3 @@
-import configparser
 from datetime import date, timedelta
 from geopy import Nominatim
 import json
@@ -7,37 +6,16 @@ import os
 import pandas as pd
 import pycountry
 import robin_stocks.robinhood as r
+from utils import load_robinhood_credentials, login_to_robinhood
 import yfinance as yf
 
-def load_robinhood_credentials(config_file):
-    """
-    Load credentials from config.ini file
-    :param config_file:
-    :return:
-    """
-    # Load configuration file
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    # Access credentials
-    username = config['robinhood_credentials']['username']
-    email = config['robinhood_credentials']['email']
-    password = config['robinhood_credentials']['password']
-    return(username, email, password)
-
-def login_to_robinhood(email, password):
-    """
-    Login to Robinhood API
-    :param email:
-    :param password:
-    :return:
-    """
-    try:
-        # Need to save the username and password in protected fileds
-        r.authentication.login(username=email, password=password, expiresIn=86400,
-                               scope='internal', by_sms=True, store_session=True)
-    except Exception as e:
-        print(f"Failed to log in: {e}")
-        raise
+def capSize(x):
+    if x < 2:
+        return('Small-Cap')
+    elif x < 10:
+        return('Mid-Cap')
+    else:
+        return('Large-Cap')
 
 def country_flag(df):
     country = pycountry.countries.get(alpha_2=df['Country']).name
@@ -54,50 +32,60 @@ def load_stock_dictionary(file_path):
         stock_dictionary = json.load(stock_dictionary)
     return(stock_dictionary)
 
-def create_daily_stocks_csv(stock_dictionary, daily_stocks_csv_path):
+def create_daily_stocks_csv(stock_dictionary, daily_stocks_csv_path, refresh_type="full"):
     """
-    ## Build out Stock positions over time and save CSV file
+    Build out Stock positions over time and save CSV file.
 
-    # What information do I want in this table?
-    # - Company
-    # - Date
-    # - Closing Values
-    # - Stocks Owned
+    Parameters:
+    - stock_dictionary: dict
+        A dictionary containing stock tickers and additional stock information.
+    - daily_stocks_csv_path: str
+        The file path where the daily stocks CSV will be saved.
+    - refresh_type: str
+        "full" for a complete refresh of data, "delta" for incremental refresh.
 
-    :return:
+    Returns:
+    - None
     """
-    # Create a list of my current stocks
+    # Create a list of current stocks
     stock_list = list(stock_dictionary.keys())
 
     # Set today's date
     today = date.today()
 
-    # Calculate the number of days from today to the first buy date
-    first_buy_date = date(2016, 9, 21)
-    days_from_first_buy = (today - first_buy_date).days
-
-    # Create the dataframe structure
+    # Initialize DataFrame structure
     daily_stocks = pd.DataFrame(columns=['Date', 'Close', 'Stock'])
 
-    # Step 1: Iterate over my list of stocks and append to a dataframe
-    row_index = 0 # Initialize a row index for .loc[]
+    # Determine refresh type
+    if refresh_type == "full" or not os.path.exists(daily_stocks_csv_path):
+        # Full refresh: Fetch data from the first buy date to today
+        first_buy_date = date(2016, 9, 21)
+        start_date = first_buy_date
+    elif refresh_type == "delta":
+        # Delta refresh: Fetch data from the last update to today
+        existing_data = pd.read_csv(daily_stocks_csv_path)
+        existing_data['Date'] = pd.to_datetime(existing_data['Date'])
+        last_update = existing_data['Date'].max().date()
+        start_date = last_update + timedelta(days=1)  # Start from the next day after the last update
+    else:
+        raise ValueError("Invalid refresh_type. Choose either 'full' or 'delta'.")
+
+    # Iterate over the stock list and fetch data
     for stock in stock_list:
-        # Download data from pandas datareader
-        temp = yf.download(stock,
-                           start=today - timedelta(days=days_from_first_buy),
-                           end=today)['Adj Close']
-        # Convert to dataframe
-        temp_df = pd.DataFrame(temp)
-        # Add column for stock name
-        temp_df['Stock'] = stock
-        # Add the date as a column
-        temp_df.reset_index(inplace = True)
-        # Rename columns
-        temp_df.columns = ['Date', 'Close', 'Stock']
-        # Add rows to the daily_stocks DataFrame using .loc
-        for _, row in temp_df.iterrows():
-            daily_stocks.loc[row_index] = row
-            row_index += 1
+        try:
+            # Fetch data from Yahoo Finance
+            temp = yf.download(stock, start=start_date, end=today)['Adj Close']
+
+            # Convert to DataFrame
+            temp_df = pd.DataFrame(temp)
+            temp_df['Stock'] = stock
+            temp_df.reset_index(inplace=True)
+            temp_df.columns = ['Date', 'Close', 'Stock']
+
+            # Append new data to the final DataFrame
+            daily_stocks = pd.concat([daily_stocks, temp_df], ignore_index=True)
+        except Exception as e:
+            print(f"Error fetching data for {stock}: {e}")
 
     # Step 2: Merge my stock quantities into this table
 
@@ -214,14 +202,40 @@ def create_daily_stocks_csv(stock_dictionary, daily_stocks_csv_path):
     # Convert Shares_Held to an integer
     daily_stocks_df['Shares_Held'] = daily_stocks_df['Shares_Held'].dropna().astype(float)
 
+    # Add in Equity column
+    daily_stocks_df['Equity'] = daily_stocks_df['Shares_Held'] * daily_stocks_df['Avg_Cost']
+    # Add a Market Value column
+    daily_stocks_df['Market_Value'] = daily_stocks_df['Close'] * daily_stocks_df['Shares_Held']
+    # Add in Total Profit column
+    daily_stocks_df['Total_Profit'] = daily_stocks_df['Market_Value'] - daily_stocks_df['Equity']
+    # Add in Daily Profit column
+    daily_stocks_df['Daily_Profit'] = daily_stocks_df.groupby('Stock')['Total_Profit'].diff()
+    # Add a Per Share Profit column
+    daily_stocks_df['Per_Share_Profit'] = daily_stocks_df['Close'] - daily_stocks_df['Avg_Cost']
+    # Add in Daily Pct Profit column
+    daily_stocks_df['Daily_Pct_Profit'] = daily_stocks_df.groupby('Stock')['Close'].pct_change(1)
+    daily_stocks_df['Daily_Pct_Profit'] = round(daily_stocks_df['Daily_Pct_Profit'] * 100, 2)
+    # Add Datetime column
+    daily_stocks_df['Datetime'] = pd.to_datetime(daily_stocks_df['Date'])
+    # Remove unnamed columns
+    daily_stocks_df = daily_stocks_df.loc[:, ~daily_stocks_df.columns.str.contains('^Unnamed')]
+
     # Re-format daily_stocks date column
     daily_stocks_df['Date'] = daily_stocks_df['Date'].dt.strftime('%Y-%m-%d')
 
     # Replace all np.nan values with 0
     daily_stocks_df.fillna(0, inplace = True)
 
-    # Save the data files
-    daily_stocks_df.to_csv(daily_stocks_csv_path)
+    # Save the updated data
+    if refresh_type == "delta" and os.path.exists(daily_stocks_csv_path):
+        # Merge new data with existing data
+        existing_data = pd.read_csv(daily_stocks_csv_path)
+        updated_data = pd.concat([existing_data, daily_stocks_df], ignore_index=True)
+        updated_data.drop_duplicates(subset=['Date', 'Stock'], inplace=True)
+        updated_data.to_csv(daily_stocks_csv_path, index=False)
+    else:
+        # Save the full refreshed data
+        daily_stocks_df.to_csv(daily_stocks_csv_path, index=False)
 
 def create_stocks_csv(stock_dictionary, stocks_csv_path):
     """
@@ -298,9 +312,14 @@ def create_stocks_csv(stock_dictionary, stocks_csv_path):
     stocks_df['52_Week_High'] = round(stocks_df['52_Week_High'], 2)
     stocks_df['52_Week_Low'] = round(stocks_df['52_Week_Low'], 2)
 
+    # Add in a column for portfolio diversity to stocks
+    stocks_df['Portfolio_Diversity'] = round(stocks_df['Market_Value'] * 100 / sum(stocks_df['Market_Value']), 2)
+    # Add in column for the direction of the stock movement
+    stocks_df['Direction'] = np.where(stocks_df['Percent_Change'] > 0, 'Up', 'Down')
+
     # Reorganize columns
-    cols = ['Price', 'Quantity', 'Avg_Cost', 'Market_Value', 'Percent_Change', 'Equity_Change', '52_Week_High',
-            '52_Week_Low', 'Asset_Type', 'Company']
+    cols = ['Company', 'Price', 'Quantity', 'Avg_Cost', 'Market_Value', 'Percent_Change', 'Equity_Change',
+            '52_Week_High','52_Week_Low', 'Asset_Type']
     stocks_df = stocks_df[cols]
 
     # Reset index
@@ -434,6 +453,9 @@ def create_stock_info_csv(stock_dictionary, stock_info_csv_path):
     stock_info_df['Hold_Ratio'] = round(stock_info_df['Hold_Ratio'], 2)
     stock_info_df['Sell_Ratio'] = round(stock_info_df['Sell_Ratio'], 2)
 
+    # Add in cap_size to stock_info (<$2B is small-cap, <$10B is mid-cap, >$10B is large-cap)
+    stock_info_df['CapSize'] = stock_info_df['Market_Cap (Billions)'].apply(capSize)
+
     # Rename columns
     stock_info_df.rename(columns={'Market_Cap (Billions)':'Market_Cap',
                                   'Avg_Volume (Millions)': 'Avg_Volume'}, inplace=True)
@@ -453,7 +475,7 @@ if __name__ == '__main__':
     stock_info_csv_path = os.path.join(app_dir, 'data', 'stock_info.csv')
     daily_stocks_csv_path = os.path.join(app_dir, 'data', 'daily_stocks.csv')
 
-    print("BEGINNING PORTFOLIO ANALYSIS")
+    print("BEGINNING INVESTMENT DATA PROCESSING")
 
     # Step 1: Load credentials
     username, email, password = load_robinhood_credentials(config_file)
