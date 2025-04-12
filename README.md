@@ -48,3 +48,9 @@ The Personal Finance Tracker is a Streamlit app designed to help users track, mo
 - Advanced visualizations for investment trends and income-expense ratios.
 - Integration with secure user authentication for historical data storage.
 - Real-time investment advice and savings goal tracking.
+- Leverage ChatGPT (or another LLM) to add additional analysis (https://finimize.com/content/how-use-chatgpt-analyze-stock?)
+  - Identify key risks for a company from their earnings calls
+  - Summarize earnings call
+  - Perform a SWOT analysis
+  - Give a high-level analysis of what a company does
+  - Generate code to create buy/sell signals (RSI - relative strength index)

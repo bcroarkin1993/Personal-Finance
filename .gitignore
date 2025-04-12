@@ -7,6 +7,9 @@ app/config/config.ini
 # Ignore virtual environment
 venv/
 
+# Ignore PyCharm temporary files
+.idea/
+
 # Ignore Streamlit temporary files
 .streamlit/
 

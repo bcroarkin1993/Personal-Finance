@@ -1,0 +1,50 @@
+{
+  "weekly_investments": [
+    {
+      "ticker": "PHO",
+      "amount": 15
+    },
+    {
+      "ticker": "SCHD",
+      "amount": 10
+    },
+    {
+      "ticker": "INDA",
+      "amount": 10
+    },
+    {
+      "ticker": "MGC",
+      "amount": 15
+    },
+    {
+      "ticker": "GXC",
+      "amount": 5
+    },
+    {
+      "ticker": "MJ",
+      "amount": 5
+    },
+    {
+      "ticker": "VNQ",
+      "amount": 10
+    },
+    {
+      "ticker": "ICLN",
+      "amount": 20
+    },
+    {
+      "ticker": "VPU",
+      "amount": 15
+    },
+    {
+      "ticker": "XLV",
+      "amount": 15
+    },
+    {
+      "ticker": "IVV",
+      "amount": 30
+    }
+  ],
+  "purchase_day": "Tuesday",
+  "purchase_time": "10:45:00"
+}

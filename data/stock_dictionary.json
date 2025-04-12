@@ -1,0 +1,3152 @@
+{
+    "TSLA": {
+        "stock_name": "Tesla",
+        "purchase_history": [
+            {
+                "date": "9/21/2016",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 204.15,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/21/2017",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 342.45,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/4/2017",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 356.85,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/24/2024",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 451.75,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/2/2025",
+                "buy_sell": "sell",
+                "quantity": 73,
+                "share_price": 423.05,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "HBI": {
+        "stock_name": "Hanesbrands",
+        "purchase_history": [
+            {
+                "date": "3/11/2019",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 17.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/1/2021",
+                "buy_sell": "sell",
+                "quantity": 3,
+                "share_price": 18.42,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "INTC": {
+        "stock_name": "Intel",
+        "purchase_history": [
+            {
+                "date": "3/11/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 53.35,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 34.63,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/23/2025",
+                "buy_sell": "buy",
+                "quantity": 25,
+                "share_price": 21.39,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SBUX": {
+        "stock_name": "Starbucks",
+        "purchase_history": [
+            {
+                "date": "12/7/2018",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 66.24,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 94.13,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 92.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2022",
+                "buy_sell": "sell",
+                "quantity": 9,
+                "share_price": 98.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BABA": {
+        "stock_name": "Alibaba",
+        "purchase_history": [
+            {
+                "date": "2/15/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 101.02,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/10/2023",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 102.01,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SNAP": {
+        "stock_name": "Snap",
+        "purchase_history": [
+            {
+                "date": "3/2/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 25.84,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/5/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 10.42,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "EA": {
+        "stock_name": "EA",
+        "purchase_history": [
+            {
+                "date": "3/2/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 107.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 127.09,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "NVDA": {
+        "stock_name": "Nvidia",
+        "purchase_history": [
+            {
+                "date": "3/2/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 129.39,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SPWR": {
+        "stock_name": "SunPower",
+        "purchase_history": [
+            {
+                "date": "3/12/2017",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 7.23,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/23/2017",
+                "buy_sell": "sell",
+                "quantity": 5,
+                "share_price": 8.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/15/2018",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 6.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/10/2023",
+                "buy_sell": "sell",
+                "quantity": 4,
+                "share_price": 13.13,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "LMT": {
+        "stock_name": "Lockheed",
+        "purchase_history": [
+            {
+                "date": "3/10/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 271.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 433.59,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "META": {
+        "stock_name": "Meta Platforms",
+        "purchase_history": [
+            {
+                "date": "5/25/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 150.59,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/4/2017",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 170.07,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/25/2021",
+                "buy_sell": "sell",
+                "quantity": 3,
+                "share_price": 322.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "JD": {
+        "stock_name": "JD.com",
+        "purchase_history": [
+            {
+                "date": "11/10/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 39.38,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 64.89,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BZUN": {
+        "stock_name": "Baozun",
+        "purchase_history": [
+            {
+                "date": "6/12/2018",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 66.62,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/1/2018",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 40.58,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 30.97,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/10/2023",
+                "buy_sell": "sell",
+                "quantity": 7,
+                "share_price": 5.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "NKE": {
+        "stock_name": "Nike",
+        "purchase_history": [
+            {
+                "date": "9/6/2018",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 80.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/7/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 93.91,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/5/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 100.61,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/25/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 90.35,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/12/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 99.24,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/18/2024",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 99.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/10/2024",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 71.84,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/2/2024",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 78.73,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/10/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 69.13,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/3/2025",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 57.36,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "FSLR": {
+        "stock_name": "First Solar",
+        "purchase_history": [
+            {
+                "date": "5/2/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 29.69,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/19/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 46.35,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/23/2017",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 46.47,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/19/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 67.39,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 41.7,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/5/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 139.26,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "UBER": {
+        "stock_name": "Uber",
+        "purchase_history": [
+            {
+                "date": "5/10/2019",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 42.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/5/2019",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 29.11,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/21/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 30.69,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/22/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 28.01,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/21/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 28.69,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/19/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 25.65,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/20/2024",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 64.6,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/10/2024",
+                "buy_sell": "buy",
+                "quantity": 15,
+                "share_price": 65.03,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "NSRGY": {
+        "stock_name": "Nestle",
+        "purchase_history": [
+            {
+                "date": "8/20/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 110.11,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/20/2019",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 110.4,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "PTON": {
+        "stock_name": "Peloton Interactive",
+        "purchase_history": [
+            {
+                "date": "9/30/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 25.66,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/30/2019",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 8.89,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "APPN": {
+        "stock_name": "Appian",
+        "purchase_history": [
+            {
+                "date": "11/25/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 42.27,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/10/2023",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 41.28,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "MTCH": {
+        "stock_name": "Match",
+        "purchase_history": [
+            {
+                "date": "11/25/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 69.76,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/19/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 76.74,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/27/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 40.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/27/2023",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 36.52,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/7/2024",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 29.45,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "WDAY": {
+        "stock_name": "Workday",
+        "purchase_history": [
+            {
+                "date": "11/25/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 176.38,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 150.76,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/3/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 210.39,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "TWLO": {
+        "stock_name": "Twilio",
+        "purchase_history": [
+            {
+                "date": "11/25/2019",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 103.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "V": {
+        "stock_name": "Visa",
+        "purchase_history": [
+            {
+                "date": "1/14/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 196.16,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 174.34,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 184.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 238.67,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "JNJ": {
+        "stock_name": "Johnson & Johnson",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 141.08,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/27/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 156.22,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2023",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 152.62,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "GILD": {
+        "stock_name": "Gilead Sciences",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 74.23,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/2/2022",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 78.22,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ZM": {
+        "stock_name": "Zoom",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 124.04,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/24/2024",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 85.95,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DGX": {
+        "stock_name": "Quest Diagnostics",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 175.42,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/2/2022",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 130.36,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "WMT": {
+        "stock_name": "Walmart",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 121.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/13/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 130.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DIS": {
+        "stock_name": "Disney",
+        "purchase_history": [
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 99.79,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/14/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 94.68,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/27/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 87.68,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/6/2023",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 102.12,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/10/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 88.38,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2023",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 85.22,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "NVTA": {
+        "stock_name": "Invitae",
+        "purchase_history": [
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 14.41,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/2/2021",
+                "buy_sell": "sell",
+                "quantity": 5,
+                "share_price": 28.19,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/3/2025",
+                "buy_sell": "sell",
+                "quantity": 5,
+                "share_price": 105.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ZUO": {
+        "stock_name": "Zuora",
+        "purchase_history": [
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 9.74,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/2/2021",
+                "buy_sell": "sell",
+                "quantity": 10,
+                "share_price": 17.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "YETI": {
+        "stock_name": "YETI",
+        "purchase_history": [
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 25.59,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "AMD": {
+        "stock_name": "AMD",
+        "purchase_history": [
+            {
+                "date": "4/14/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 54.69,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/17/2023",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 70.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/1/2024",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 142.28,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/13/2025",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 117.79,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/12/2025",
+                "buy_sell": "buy",
+                "quantity": 7,
+                "share_price": 109.75,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "UCO": {
+        "stock_name": "ProShares Ultra Bloomberg Crude Oil ETF",
+        "purchase_history": [
+            {
+                "date": "3/20/2020",
+                "buy_sell": "buy",
+                "quantity": 0.36,
+                "share_price": 56.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/8/2020",
+                "buy_sell": "buy",
+                "quantity": 1.36,
+                "share_price": 59.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/9/2020",
+                "buy_sell": "buy",
+                "quantity": 0.76,
+                "share_price": 50.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/15/2020",
+                "buy_sell": "buy",
+                "quantity": 0.52,
+                "share_price": 41.75,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/16/2020",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 40.75,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/27/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 12.63,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/15/2021",
+                "buy_sell": "sell",
+                "quantity": 8,
+                "share_price": 75.95,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DKNG": {
+        "stock_name": "Draftkings",
+        "purchase_history": [
+            {
+                "date": "4/24/2020",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 18.78,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DAL": {
+        "stock_name": "Delta Air Lines",
+        "purchase_history": [
+            {
+                "date": "4/24/2020",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 22.08,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/15/2020",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 19.31,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/9/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 31.82,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "sell",
+                "quantity": 13,
+                "share_price": 31.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "USB": {
+        "stock_name": "US Bank",
+        "purchase_history": [
+            {
+                "date": "5/28/2020",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 36.83,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/13/2022",
+                "buy_sell": "sell",
+                "quantity": 10,
+                "share_price": 40.92,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "C": {
+        "stock_name": "Citigroup",
+        "purchase_history": [
+            {
+                "date": "5/28/2020",
+                "buy_sell": "buy",
+                "quantity": 7,
+                "share_price": 50.56,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/25/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 56.51,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/13/2022",
+                "buy_sell": "sell",
+                "quantity": 8,
+                "share_price": 42.75,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BAC": {
+        "stock_name": "Bank of America",
+        "purchase_history": [
+            {
+                "date": "5/28/2020",
+                "buy_sell": "buy",
+                "quantity": 11,
+                "share_price": 25.26,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/13/2022",
+                "buy_sell": "sell",
+                "quantity": 11,
+                "share_price": 31.36,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ALGT": {
+        "stock_name": "Allegiant Air",
+        "purchase_history": [
+            {
+                "date": "9/9/2020",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 132.43,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "sell",
+                "quantity": 2,
+                "share_price": 67.1,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "JBLU": {
+        "stock_name": "JetBlue Airways",
+        "purchase_history": [
+            {
+                "date": "9/9/2020",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 12.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "sell",
+                "quantity": 20,
+                "share_price": 6.71,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "LUV": {
+        "stock_name": "Southwest Airlines",
+        "purchase_history": [
+            {
+                "date": "9/9/2020",
+                "buy_sell": "buy",
+                "quantity": 12,
+                "share_price": 39.48,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "sell",
+                "quantity": 12,
+                "share_price": 32.73,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "FSLY": {
+        "stock_name": "Fastly",
+        "purchase_history": [
+            {
+                "date": "10/28/2020",
+                "buy_sell": "buy",
+                "quantity": 13,
+                "share_price": 71.4,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/2/2020",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 64.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "OPTT": {
+        "stock_name": "Ocean Power Technologies",
+        "purchase_history": [
+            {
+                "date": "1/29/2021",
+                "buy_sell": "buy",
+                "quantity": 9,
+                "share_price": 3.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/29/2021",
+                "buy_sell": "sell",
+                "quantity": 9,
+                "share_price": 0.711,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "MARA": {
+        "stock_name": "Marathon Patent Group",
+        "purchase_history": [
+            {
+                "date": "1/4/2021",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 10.7,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/12/2021",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 25.95,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/15/2021",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 23.13,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/9/2023",
+                "buy_sell": "sell",
+                "quantity": 10,
+                "share_price": 7.96,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BB": {
+        "stock_name": "Blackberry",
+        "purchase_history": [
+            {
+                "date": "1/27/2021",
+                "buy_sell": "buy",
+                "quantity": 45,
+                "share_price": 20.84,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "NOK": {
+        "stock_name": "Nokia",
+        "purchase_history": [
+            {
+                "date": "1/27/2021",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 6.59,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/2/2022",
+                "buy_sell": "sell",
+                "quantity": 10,
+                "share_price": 4.4,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "PLUG": {
+        "stock_name": "Plug Power",
+        "purchase_history": [
+            {
+                "date": "3/17/2021",
+                "buy_sell": "buy",
+                "quantity": 25,
+                "share_price": 37.34,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/25/2021",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 32.31,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/12/2021",
+                "buy_sell": "buy",
+                "quantity": 33,
+                "share_price": 29.05,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/11/2023",
+                "buy_sell": "buy",
+                "quantity": 39,
+                "share_price": 7.52,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/2/2024",
+                "buy_sell": "buy",
+                "quantity": 50,
+                "share_price": 2.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "TXMD": {
+        "stock_name": "TherapeauticsMD",
+        "purchase_history": [
+            {
+                "date": "3/30/2021",
+                "buy_sell": "buy",
+                "quantity": 35,
+                "share_price": 1.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 9.62,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "HOOD": {
+        "stock_name": "Robinhood Markets",
+        "purchase_history": [
+            {
+                "date": "7/29/2021",
+                "buy_sell": "buy",
+                "quantity": 17,
+                "share_price": 35.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "OTLY": {
+        "stock_name": "Oatly Group",
+        "purchase_history": [
+            {
+                "date": "8/18/2021",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 15.25,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/18/2021",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 7.78,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/24/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 5.2,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/14/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 2.05,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/13/2023",
+                "buy_sell": "buy",
+                "quantity": 18,
+                "share_price": 2.52,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/6/2023",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 2.31,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/26/2023",
+                "buy_sell": "buy",
+                "quantity": 44,
+                "share_price": 1.72,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "CHGG": {
+        "stock_name": "Chegg",
+        "purchase_history": [
+            {
+                "date": "11/5/2021",
+                "buy_sell": "buy",
+                "quantity": 29,
+                "share_price": 31.79,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/19/2021",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 26.53,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/2/2023",
+                "buy_sell": "sell",
+                "quantity": 30,
+                "share_price": 9.11,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "COST": {
+        "stock_name": "Costco",
+        "purchase_history": [
+            {
+                "date": "3/15/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 542.32,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 548.06,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SNOW": {
+        "stock_name": "Snowflake",
+        "purchase_history": [
+            {
+                "date": "3/15/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 171.83,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/11/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 155.6,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/14/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 187.71,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/20/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 148.16,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/28/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 176.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/2/2024",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 119.89,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DUOL": {
+        "stock_name": "Duolingo",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 92.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SPOT": {
+        "stock_name": "Spotify",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 145.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/29/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 103.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "CSV": {
+        "stock_name": "CVS",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 108.19,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BE": {
+        "stock_name": "Bloom Energy",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 24.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/29/2022",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 19.4,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/6/2022",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 15.3,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/9/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 13.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/5/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 14.44,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/26/2023",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 15.74,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/23/2023",
+                "buy_sell": "buy",
+                "quantity": 17,
+                "share_price": 11.19,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/12/2023",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 12.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/16/2024",
+                "buy_sell": "buy",
+                "quantity": 15,
+                "share_price": 12.25,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/21/2024",
+                "buy_sell": "buy",
+                "quantity": 15,
+                "share_price": 8.82,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ABNB": {
+        "stock_name": "AirBnB",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 165.35,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "5/9/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 121.05,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "AAPL": {
+        "stock_name": "Apple",
+        "purchase_history": [
+            {
+                "date": "3/21/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 166.47,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "SEDG": {
+        "stock_name": "SolarEdge",
+        "purchase_history": [
+            {
+                "date": "5/6/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 252.37,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/15/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 171.5,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/18/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 136.68,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 121.48,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/20/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 83.96,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ADYEY": {
+        "stock_name": "Adyen N.V.",
+        "purchase_history": [
+            {
+                "date": "5/6/2022",
+                "buy_sell": "buy",
+                "quantity": 9,
+                "share_price": 15.08,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/29/2022",
+                "buy_sell": "sell",
+                "quantity": 9,
+                "share_price": 15.84,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "DXCM": {
+        "stock_name": "DexCom",
+        "purchase_history": [
+            {
+                "date": "5/6/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 351.41,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/9/2022",
+                "buy_sell": "sell",
+                "quantity": 4,
+                "share_price": 92.69,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ROVR": {
+        "stock_name": "Rover",
+        "purchase_history": [
+            {
+                "date": "6/21/2022",
+                "buy_sell": "buy",
+                "quantity": 24,
+                "share_price": 4.29,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/23/2022",
+                "buy_sell": "buy",
+                "quantity": 26,
+                "share_price": 3.24,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 3.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/28/2024",
+                "buy_sell": "sell",
+                "quantity": 70,
+                "share_price": 11.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "MELI": {
+        "stock_name": "MercadoLibre",
+        "purchase_history": [
+            {
+                "date": "8/3/2022",
+                "buy_sell": "buy",
+                "quantity": 0.14,
+                "share_price": 993.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "buy",
+                "quantity": 0.35,
+                "share_price": 913.54,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "buy",
+                "quantity": 0.01,
+                "share_price": 914.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 0.5,
+                "share_price": 800.0,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "O": {
+        "stock_name": "Realty Income",
+        "purchase_history": [
+            {
+                "date": "8/19/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 73.07,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 71.26,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/25/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 69.66,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/12/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 67.09,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/14/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 66.05,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/29/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 57.78,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/12/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 60.73,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/28/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 49.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/30/2023",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 45.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "AFCG": {
+        "stock_name": "AFC Gamma",
+        "purchase_history": [
+            {
+                "date": "9/6/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 16.78,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/12/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 17.54,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/14/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 17.33,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/7/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 16.04,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 16.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/14/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 15.87,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/4/2023",
+                "buy_sell": "buy",
+                "quantity": 9,
+                "share_price": 11.89,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "MSFT": {
+        "stock_name": "Microsoft",
+        "purchase_history": [
+            {
+                "date": "9/21/2016",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 57.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/23/2017",
+                "buy_sell": "sell",
+                "quantity": 5,
+                "share_price": 73.06,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/12/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 266.06,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 231.28,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "COF": {
+        "stock_name": "Capital One",
+        "purchase_history": [
+            {
+                "date": "1/17/2017",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 87.26,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/23/2017",
+                "buy_sell": "sell",
+                "quantity": 1,
+                "share_price": 81.54,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/13/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 101.62,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/13/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 93.9,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/18/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 96.52,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/20/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 91.11,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "TREX": {
+        "stock_name": "Trex",
+        "purchase_history": [
+            {
+                "date": "9/20/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 46.53,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/28/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 43.85,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/24/2024",
+                "buy_sell": "sell",
+                "quantity": 4,
+                "share_price": 79.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/7/2024",
+                "buy_sell": "sell",
+                "quantity": 4,
+                "share_price": 65.97,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "WM": {
+        "stock_name": "Waste Management",
+        "purchase_history": [
+            {
+                "date": "10/7/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 157.32,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/23/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 152.49,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "8/7/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 161.29,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "GOOG": {
+        "stock_name": "Alphabet Class C",
+        "purchase_history": [
+            {
+                "date": "10/10/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 98.4,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 98.02,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/27/2022",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 93.08,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "TXN": {
+        "stock_name": "Texas Instruments",
+        "purchase_history": [
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 151.13,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ABBV": {
+        "stock_name": "AbbVie",
+        "purchase_history": [
+            {
+                "date": "10/14/2022",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 143.24,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "VZ": {
+        "stock_name": "Verizon",
+        "purchase_history": [
+            {
+                "date": "10/21/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 35.04,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/31/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 37.26,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/20/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 37.41,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/10/2023",
+                "buy_sell": "buy",
+                "quantity": 8,
+                "share_price": 39.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "7/17/2023",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 31.38,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/12/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 30.81,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/23/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 39.22,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "TTD": {
+        "stock_name": "Trade Desk",
+        "purchase_history": [
+            {
+                "date": "12/5/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 54.42,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "12/15/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 47.48,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "11/20/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 67.79,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/13/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 81.98,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "CRWD": {
+        "stock_name": "CrowdStrike Holdings",
+        "purchase_history": [
+            {
+                "date": "1/4/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 103.52,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "LOW": {
+        "stock_name": "Lowe's",
+        "purchase_history": [
+            {
+                "date": "1/30/2023",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 203.38,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/30/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 190.81,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BEPC": {
+        "stock_name": "Brookfield Renewable",
+        "purchase_history": [
+            {
+                "date": "10/6/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 22.14,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/11/2023",
+                "buy_sell": "buy",
+                "quantity": 27,
+                "share_price": 23.8,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/25/2024",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 24.17,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/23/2025",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 24.71,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "PLD": {
+        "stock_name": "Prologis",
+        "purchase_history": [
+            {
+                "date": "11/21/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 110.21,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/2/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 125.06,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "4/22/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 103.23,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "MRNA": {
+        "stock_name": "Moderna",
+        "purchase_history": [
+            {
+                "date": "4/12/2024",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 105.53,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "9/2/2024",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 77.55,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/28/2024",
+                "buy_sell": "buy",
+                "quantity": 7,
+                "share_price": 53.65,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "10/28/2024",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 42.35,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "1/14/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 35.20,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "2/13/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 31.58,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "ASML": {
+        "stock_name": "ASML Holding NV",
+        "purchase_history": [
+            {
+                "date": "12/2/2024",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 683.90,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "3/27/2025",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 692.54,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VICI": {
+        "stock_name": "VICI Properties, Inc.",
+        "purchase_history": [
+            {
+                "date": "1/23/2025",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 29.18,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "CMG": {
+        "stock_name": "Chipotle",
+        "purchase_history": [
+            {
+                "date": "2/14/2025",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 57.24,
+                "platform": "Robinhood",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "BLV": {
+        "stock_name": "Vanguard Long Term Bond ETF",
+        "purchase_history": [
+            {
+                "date": "8/5/2016",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 100.87,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "2/2/2018",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 92.90,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "3/9/2021",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 98.47,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "3/6/2023",
+                "buy_sell": "buy",
+                "quantity": 12,
+                "share_price": 74.04,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "SCHD": {
+        "stock_name": "Schwab U.S. Dividend Equity ETF",
+        "purchase_history": [
+            {
+                "date": "1/29/2019",
+                "buy_sell": "buy",
+                "quantity": 0.61349000,
+                "share_price": 48.90,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "6/18/2019",
+                "buy_sell": "buy",
+                "quantity": 0.47046000,
+                "share_price": 53.14,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/9/2021",
+                "buy_sell": "buy",
+                "quantity": 0.07048000,
+                "share_price": 70.95,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/16/2021",
+                "buy_sell": "buy",
+                "quantity": 0.06940000,
+                "share_price": 72.05,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/23/2021",
+                "buy_sell": "buy",
+                "quantity": 0.07013000,
+                "share_price": 71.30,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            },
+            {
+                "date": "3/30/2021",
+                "buy_sell": "buy",
+                "quantity": 0.06838000,
+                "share_price": 73.12,
+                "platform": "Stash",
+                "account_type": "Taxable"
+            }
+        ]
+    },
+    "VB": {
+        "stock_name": "Vanguard Small-Cap Index Fund",
+        "purchase_history": [
+            {
+                "date": "1/4/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 185.98,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "3/6/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 201.37,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "5/4/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 182.94,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "6/5/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 190.11,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/5/2024",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 221.81,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/5/2024",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 331.13,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VEA": {
+        "stock_name": "Vanguard Developed Markets ETF",
+        "purchase_history": [
+            {
+                "date": "8/4/2016",
+                "buy_sell": "buy",
+                "quantity": 28,
+                "share_price": 36.79,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "2/2/2018",
+                "buy_sell": "buy",
+                "quantity": 12,
+                "share_price": 46.83,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "5/1/2020",
+                "buy_sell": "buy",
+                "quantity": 15,
+                "share_price": 35.05,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "7/6/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 39.91,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/7/2020",
+                "buy_sell": "buy",
+                "quantity": 9,
+                "share_price": 40.77,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "5/5/2021",
+                "buy_sell": "buy",
+                "quantity": 15,
+                "share_price": 51.03,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "12/6/2021",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 50.20,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/7/2022",
+                "buy_sell": "buy",
+                "quantity": 18,
+                "share_price": 47.44,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VIG": {
+        "stock_name": "Vanguard Dividend Appreciation ETF",
+        "purchase_history": [
+            {
+                "date": "9/14/2022",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 147.63,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "10/10/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 137.39,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "11/7/2022",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 146.89,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "12/6/2022",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 156.09,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/4/2023",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 155.03,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/5/2024",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 163.28,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VNQ": {
+        "stock_name": "Vanguard Real Estate ETF",
+        "purchase_history": [
+            {
+                "date": "8/5/2016",
+                "buy_sell": "buy",
+                "quantity": 11,
+                "share_price": 91.10,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "6/28/2017",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 84.90,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "5/1/2020",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 74.08,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "7/6/2020",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 81.60,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/7/2020",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 80.93,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "1/4/2021",
+                "buy_sell": "buy",
+                "quantity": 8,
+                "share_price": 85.20,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "12/28/2021",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 113.93,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "7/5/2022",
+                "buy_sell": "buy",
+                "quantity": 10,
+                "share_price": 91.81,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "7/6/2023",
+                "buy_sell": "buy",
+                "quantity": 8,
+                "share_price": 83.66,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VOE": {
+        "stock_name": "Vanguard Mid-Cap Value ETF",
+        "purchase_history": [
+            {
+                "date": "8/4/2016",
+                "buy_sell": "buy",
+                "quantity": 8,
+                "share_price": 93.07,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "9/4/2018",
+                "buy_sell": "buy",
+                "quantity": 8,
+                "share_price": 115.06,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "7/6/2020",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 97.22,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/7/2020",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 101.65,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "11/9/2020",
+                "buy_sell": "buy",
+                "quantity": 6,
+                "share_price": 113.48,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VOO": {
+        "stock_name": "Vanguard S&P500 ETF",
+        "purchase_history": [
+            {
+                "date": "7/7/2016",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 195.24,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "2/7/2017",
+                "buy_sell": "buy",
+                "quantity": 5,
+                "share_price": 212.24,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "5/1/2020",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 262.14,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "10/6/2020",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 311.98,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/9/2021",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 375.49,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "12/6/2021",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 419.36,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "12/28/2021",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 439.28,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/11/2022",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 387.00,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VUG": {
+        "stock_name": "Vanguard Growth ETF",
+        "purchase_history": [
+            {
+                "date": "10/4/2023",
+                "buy_sell": "buy",
+                "quantity": 3,
+                "share_price": 272.02,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "1/2/2024",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 307.92,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "2/6/2024",
+                "buy_sell": "buy",
+                "quantity": 4,
+                "share_price": 328.58,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "3/4/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 343.04,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "6/11/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 362.70,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/5/2024",
+                "buy_sell": "buy",
+                "quantity": 1,
+                "share_price": 331.13,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "9/5/2024",
+                "buy_sell": "buy",
+                "quantity": 2,
+                "share_price": 363.06,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    },
+    "VWO": {
+        "stock_name": "Vanguard International Equity Index Fund ETF",
+        "purchase_history": [
+            {
+                "date": "8/4/2016",
+                "buy_sell": "buy",
+                "quantity": 17,
+                "share_price": 37.55,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "8/5/2021",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 51.84,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/4/2022",
+                "buy_sell": "buy",
+                "quantity": 20,
+                "share_price": 47.60,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            },
+            {
+                "date": "4/5/2024",
+                "buy_sell": "buy",
+                "quantity": 18,
+                "share_price": 39.64,
+                "platform": "Fidelity",
+                "account_type": "Roth IRA"
+            }
+        ]
+    }
+}
