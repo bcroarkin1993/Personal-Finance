@@ -6,6 +6,13 @@ import streamlit as st
 import altair as alt
 
 from scripts.data_processing import load_and_preprocess_data
+# Import the helper functions from our new utils script
+from scripts.utils import (
+    calculate_average_monthly_total,
+    calculate_yearly_total,
+    get_last_refresh_date_from_df,
+    get_portfolio_snapshot
+)
 
 # ----------------- PAGE CONFIG ----------------- #
 
@@ -15,7 +22,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ----------------- LIGHT CUSTOM STYLING ----------------- #
+# ----------------- LIGHT CUSTOM STYLING & SIDEBAR FIX ----------------- #
 
 st.markdown(
     """
@@ -77,6 +84,12 @@ st.markdown(
         font-size: 0.8rem;
         opacity: 0.7;
     }
+
+    /* HIDE DEFAULT STREAMLIT SIDEBAR NAV */
+    /* This prevents the "double sidebar" issue when using pages/ folder */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -86,215 +99,91 @@ st.markdown(
 
 st.sidebar.title("Navigation")
 
-# NOTE: For st.switch_page, these strings should match your actual app paths.
-# Adjust if your multipage structure is different.
-pages: Dict[str, str] = {
+# Define valid page paths (Must point to pages/ folder for st.switch_page)
+pages = {
     "Home": "main.py",
-    # Budget pages
-    "Budget Overview": "views/Budget_Overview.py",
-    "Income Analysis": "views/Income.py",
-    "Expense Breakdown": "views/Expenses.py",
-    # Investment pages
-    "Portfolio Overview": "views/Portfolio_Overview.py",
-    "Industry & Sector Breakdown": "views/Industry_&_Sector_Breakdown.py",
-    "Company Deep-Dive": "views/Company_Deep-Dive.py",
-    "Buying Opportunities": "views/Buying_Opportunities.py",
-    "Stock Peer Analysis": "views/Stock_Peer_Analysis.py",
-    "Holdings Leaderboard": "views/Holdings_Leaderboard.py"
+    "Budget Overview": "pages/Budget_Overview.py",
+    "Income Analysis": "pages/Income.py",
+    "Expense Breakdown": "pages/Expenses.py",
+    "Portfolio Overview": "pages/Portfolio_Overview.py",
+    "Industry & Sector Breakdown": "pages/Industry_&_Sector_Breakdown.py",
+    "Company Deep-Dive": "pages/Company_Deep-Dive.py",
+    "Buying Opportunities": "pages/Buying_Opportunities.py",
+    "Stock Peer Analysis": "pages/Stock_Peer_Analysis.py",
+    "Holdings Leaderboard": "pages/Holdings_Leaderboard.py"
 }
 
+# Initialize current page in session state if not present
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = "Home"
+
+def navigate():
+    """Callback to update session state when a radio button is clicked."""
+    # We check which radio button triggered the change
+    if st.session_state.get("nav_home") != "Home" and st.session_state.get("nav_home") is not None:
+         st.session_state["current_page"] = "Home"
+    elif st.session_state.get("nav_budget"):
+         st.session_state["current_page"] = st.session_state["nav_budget"]
+    elif st.session_state.get("nav_invest"):
+         st.session_state["current_page"] = st.session_state["nav_invest"]
+
+# --- Navigation UI ---
+
 st.sidebar.subheader("🏠 Home")
-home_page = st.sidebar.radio(
-    "Go to Home:",
+st.sidebar.radio(
+    "Home Nav",
     options=["Home"],
-    index=0,
+    key="nav_home",
     label_visibility="collapsed",
+    on_change=navigate,
+    # If current page is Home, select index 0, otherwise None (deselect)
+    index=0 if st.session_state["current_page"] == "Home" else None
 )
 
 st.sidebar.subheader("📊 Budget Pages")
-budget_page = st.sidebar.radio(
-    "Go to Budget Page:",
-    options=["Budget Overview",
-             "Income Analysis",
-             "Expense Breakdown"],
-    index=0,
+# Check if current page is in this group to set index
+budget_opts = ["Budget Overview", "Income Analysis", "Expense Breakdown"]
+try:
+    b_index = budget_opts.index(st.session_state["current_page"])
+except ValueError:
+    b_index = None
+
+st.sidebar.radio(
+    "Budget Nav",
+    options=budget_opts,
+    key="nav_budget",
+    index=b_index,
     label_visibility="collapsed",
+    on_change=navigate
 )
 
 st.sidebar.subheader("📈 Investment Pages")
-investment_page = st.sidebar.radio(
-    "Go to Investment Page:",
-    options=[
-        "Portfolio Overview",
-        "Industry & Sector Breakdown",
-        "Company Deep-Dive",
-        "Buying Opportunities",
-        "Peer Analysis",
-        "Holdings Leaderboard"
-    ],
-    index=0,
+invest_opts = [
+    "Portfolio Overview", "Industry & Sector Breakdown", "Company Deep-Dive",
+    "Buying Opportunities", "Peer Analysis", "Holdings Leaderboard"
+]
+try:
+    i_index = invest_opts.index(st.session_state["current_page"])
+except ValueError:
+    i_index = None
+
+st.sidebar.radio(
+    "Invest Nav",
+    options=invest_opts,
+    key="nav_invest",
+    index=i_index,
     label_visibility="collapsed",
+    on_change=navigate
 )
 
-# Decide which page is selected
-if home_page == "Home":
-    selected_page = "Home"
-elif budget_page:
-    selected_page = budget_page
-else:
-    selected_page = investment_page
+# ----------------- ROUTING LOGIC ----------------- #
 
-
-def handle_navigation(page_key: str):
-    """Use Streamlit's multipage navigation to switch pages."""
-    if page_key == "Home":
-        return
-    page_file = pages.get(page_key)
-    if not page_file:
-        return
-    try:
-        st.switch_page(page_file)
-    except Exception:
-        # If user is on older Streamlit or paths don't match,
-        # we fail silently and stay on Home rather than crashing.
-        st.warning(
-            "Sidebar navigation requires Streamlit's multipage setup. "
-            "Check that your page paths in `pages` match your actual files."
-        )
-
-
-# If not on Home, navigate away and stop executing this page
-if selected_page != "Home":
-    handle_navigation(selected_page)
-    st.stop()
-
-# ----------------- HELPER FUNCTIONS ----------------- #
-
-def get_last_refresh_date_from_df(df: pd.DataFrame, date_col: str = "date") -> str:
-    """
-    Get the most recent date from a dataframe date column.
-    Assumes the column is a date-like string or datetime.
-    """
-    try:
-        if date_col not in df.columns:
-            return f"Column '{date_col}' not found"
-        dates = pd.to_datetime(df[date_col], errors="coerce")
-        if dates.isna().all():
-            return "No valid dates"
-        last_date = dates.max()
-        return last_date.strftime("%Y-%m-%d")
-    except Exception as e:
-        return f"Error: {e}"
-
-
-def _coerce_amount_numeric(df: pd.DataFrame, amount_col: str = "amount") -> pd.DataFrame:
-    """
-    Force the amount column to numeric, handling strings like '$2,550.83', '1,234', '(123.45)'.
-    """
-    if amount_col not in df.columns:
-        raise KeyError(f"Required column '{amount_col}' not found")
-
-    df = df.copy()
-    s = df[amount_col].astype(str)
-
-    # Remove $ and commas
-    s = s.str.replace(r"[,\$]", "", regex=True)
-    # Convert '(123.45)' -> '-123.45'
-    s = s.str.replace(r"^\((.*)\)$", r"-\1", regex=True)
-
-    df[amount_col] = pd.to_numeric(s, errors="coerce")
-    return df
-
-
-def calculate_average_monthly_total(
-    df: pd.DataFrame,
-    date_col: str = "date",
-    amount_col: str = "amount",
-) -> float:
-    """
-    Generic helper to calculate average monthly total (income/expenses)
-    for the current year from a dataframe.
-    """
-    try:
-        if date_col not in df.columns:
-            raise KeyError(f"Required column '{date_col}' not found")
-
-        df = _coerce_amount_numeric(df, amount_col=amount_col)
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-
-        current_year = pd.Timestamp.now().year
-        df_year = df[df[date_col].dt.year == current_year]
-
-        if df_year.empty:
-            return 0.0
-
-        monthly_totals = (
-            df_year
-            .groupby(df_year[date_col].dt.to_period("M"))[amount_col]
-            .sum()
-        )
-
-        return float(monthly_totals.mean())
-    except Exception as e:
-        st.error(f"Error calculating average monthly total: {e}")
-        return 0.0
-
-
-def calculate_yearly_total(
-    df: pd.DataFrame,
-    date_col: str = "date",
-    amount_col: str = "amount",
-) -> float:
-    """
-    Calculate the total for the current year (e.g., annual income or expenses).
-    """
-    try:
-        if date_col not in df.columns:
-            raise KeyError(f"Required column '{date_col}' not found")
-
-        df = _coerce_amount_numeric(df, amount_col=amount_col)
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-
-        current_year = pd.Timestamp.now().year
-        df_year = df[df[date_col].dt.year == current_year]
-
-        return float(df_year[amount_col].sum())
-    except Exception as e:
-        st.error(f"Error calculating yearly total: {e}")
-        return 0.0
-
-
-def get_portfolio_snapshot(data: Dict[str, Any]) -> Dict[str, float]:
-    """
-    Derive investment snapshot metrics from preprocessed data.
-
-    Uses the `daily_equity` table for portfolio-level numbers.
-    """
-    daily_equity: pd.DataFrame = data.get("daily_equity", pd.DataFrame())
-
-    if daily_equity.empty or "date" not in daily_equity.columns:
-        return {
-            "total_portfolio_value": 0.0,
-            "total_equity": 0.0,
-            "total_profit": 0.0,
-        }
-
-    df = daily_equity.copy()
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.sort_values("date")
-
-    latest = df.iloc[-1]
-
-    total_portfolio_value = float(latest.get("market_value", 0.0))
-    total_equity = float(latest.get("equity", 0.0))
-    total_profit = float(latest.get("total_profit", 0.0))
-
-    return {
-        "total_portfolio_value": total_portfolio_value,
-        "total_equity": total_equity,
-        "total_profit": total_profit,
-    }
-
+if st.session_state["current_page"] != "Home":
+    page_path = pages.get(st.session_state["current_page"])
+    if page_path:
+        st.switch_page(page_path)
+    else:
+        st.error(f"Page not found: {st.session_state['current_page']}")
 
 # ----------------- HOME PAGE (LANDING) ----------------- #
 
@@ -438,45 +327,45 @@ with right:
         except Exception as e:
             st.error(f"Failed to update investment data: {e}")
 
-# ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
-st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
-
-if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
-    chart_df = daily_equity_df.copy()
-    chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
-    chart_df = chart_df.sort_values("date")
-
-    # Altair chart with month-year x-axis and profit in tooltip, color by profit sign
-    chart = (
-        alt.Chart(chart_df)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X(
-                "date:T",
-                axis=alt.Axis(format="%b %y", title="Date"),
-            ),
-            y=alt.Y("market_value:Q", title="Portfolio Value"),
-            color=alt.condition(
-                "datum.total_profit >= 0",
-                alt.value("#2ecc71"),  # green
-                alt.value("#e74c3c"),  # red
-            ),
-            tooltip=[
-                alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),
-                alt.Tooltip("market_value:Q", title="Portfolio Value", format=",.2f"),
-                alt.Tooltip("total_profit:Q", title="Total Profit", format=",.2f"),
-            ],
-        )
-        .properties(height=300)
-    )
-
-    st.altair_chart(chart, use_container_width=True)
-    st.markdown(
-        "<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>",
-        unsafe_allow_html=True,
-    )
-else:
-    st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
+# # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
+# st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
+#
+# if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
+#     chart_df = daily_equity_df.copy()
+#     chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
+#     chart_df = chart_df.sort_values("date")
+#
+#     # Altair chart with month-year x-axis and profit in tooltip, color by profit sign
+#     chart = (
+#         alt.Chart(chart_df)
+#         .mark_line(point=True)
+#         .encode(
+#             x=alt.X(
+#                 "date:T",
+#                 axis=alt.Axis(format="%b %y", title="Date"),
+#             ),
+#             y=alt.Y("market_value:Q", title="Portfolio Value"),
+#             color=alt.condition(
+#                 "datum.total_profit >= 0",
+#                 alt.value("#2ecc71"),  # green
+#                 alt.value("#e74c3c"),  # red
+#             ),
+#             tooltip=[
+#                 alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),
+#                 alt.Tooltip("market_value:Q", title="Portfolio Value", format=",.2f"),
+#                 alt.Tooltip("total_profit:Q", title="Total Profit", format=",.2f"),
+#             ],
+#         )
+#         .properties(height=300)
+#     )
+#
+#     st.altair_chart(chart, use_container_width=True)
+#     st.markdown(
+#         "<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>",
+#         unsafe_allow_html=True,
+#     )
+# else:
+#     st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
 
 # ----------------- FOOTER ----------------- #
 st.markdown("---")

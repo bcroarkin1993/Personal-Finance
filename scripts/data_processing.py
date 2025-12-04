@@ -1,10 +1,11 @@
 import json
+import numpy as np
 import sys
 from pathlib import Path
 from typing import Dict, Any
-
 import pandas as pd
 import streamlit as st
+import yfinance as yf
 
 # ----- Project root & paths -----
 
@@ -204,6 +205,90 @@ def load_main_data() -> Dict[str, Any]:
     }
 
 
+# ----- SCORING LOGIC -----
+
+def calculate_buying_opportunity_scores(df: pd.DataFrame, portfolio_cash: float = 0) -> pd.DataFrame:
+    """
+    Applies the proprietary scoring algorithm to a dataframe of stocks.
+    Expects columns: 'price', '52_week_high', 'portfolio_diversity', 'target_mean_price', risk cols.
+    """
+    if df.empty:
+        return df
+
+    df = df.copy()
+
+    # 1. Fetch Market Context (VIX + SP500)
+    # Note: In production, you might want to cache this specifically to avoid 2s delay
+    try:
+        vix_data = yf.Ticker("^VIX").history(period="5d")
+        vix = vix_data["Close"].iloc[-1] if not vix_data.empty else 20
+
+        sp500 = yf.Ticker("^GSPC").history(period="1mo")
+        if not sp500.empty:
+            sp500_perf = (sp500["Close"].iloc[-1] - sp500["Close"].iloc[0]) / sp500["Close"].iloc[0]
+        else:
+            sp500_perf = 0
+    except Exception:
+        vix = 20
+        sp500_perf = 0
+
+    # Market Sentiment Score (Higher VIX + Lower Market Perf = Higher Score)
+    market_sentiment_score = (vix / 40) + (1 - sp500_perf)
+    market_sentiment_score = np.clip(market_sentiment_score, 0, 1)
+
+    # 2. Normalize Helper
+    def normalize(series):
+        min_val = series.min()
+        max_val = series.max()
+        if max_val == min_val: return 0
+        return (series - min_val) / (max_val - min_val)
+
+    # 3. Component Scores
+
+    # A: 52-Week Discount (New Logic: % off the high)
+    # If High is 100 and Price is 80, val is 0.2. We cap max score at 50% discount.
+    df["discount_pct"] = (df["52_week_high"] - df["price"]) / df["52_week_high"]
+    df["score_52wk"] = (df["discount_pct"] / 0.50).clip(0, 1)
+    # Handle NaNs or negative discounts (breakouts)
+    df["score_52wk"] = df["score_52wk"].fillna(0)
+
+    # B: Portfolio Diversity (Lower is better for buying more)
+    # If it's 0 (new buy), score is 1. If it's high % (overweight), score is low.
+    df["portfolio_diversity"] = pd.to_numeric(df["portfolio_diversity"], errors='coerce').fillna(0)
+    df["score_diversity"] = 1 - (df["portfolio_diversity"] / 100).clip(0, 1)
+
+    # C: Analyst Target Discount
+    df["target_mean_price"] = pd.to_numeric(df["target_mean_price"], errors='coerce').fillna(df["price"])
+    target_upside = (df["target_mean_price"] - df["price"]) / df["price"]
+    df["score_target"] = target_upside.clip(0, 1)  # Cap at 100% upside
+
+    # D: Risk Score (Inverted: High risk = Low score)
+    # Assuming risk columns are 1 (Low) to 10 (High) or similar.
+    # If columns missing, assume neutral.
+    risk_cols = ["audit_risk", "board_risk", "compensation_risk", "shareholder_rights_risk"]
+    for c in risk_cols:
+        if c not in df.columns: df[c] = 5
+
+    df["avg_risk"] = df[risk_cols].mean(axis=1)
+    df["score_risk"] = 1 - (df["avg_risk"] / 10)  # Assuming 10 is max risk
+    df["score_risk"] = df["score_risk"].clip(0, 1)
+
+    # E: Cash Weight
+    cash_bonus = min(portfolio_cash / 10000, 1.0)
+
+    # 4. Final Weighted Calculation
+    # Weights: 52wk(25%), Diversity(20%), Target(20%), Risk(15%), Sentiment(15%), Cash(5%)
+    df["buy_score"] = (
+                              (0.25 * df["score_52wk"]) +
+                              (0.20 * df["score_diversity"]) +
+                              (0.20 * df["score_target"]) +
+                              (0.15 * df["score_risk"]) +
+                              (0.15 * market_sentiment_score) +
+                              (0.05 * cash_bonus)
+                      ) * 100
+
+    return df.sort_values("buy_score", ascending=False)
+
 def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Preprocesses the raw dataframes.
@@ -214,7 +299,6 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         dict: A dictionary containing processed dataframes.
     """
-    stock_dictionary = raw_data["stock_dictionary"]
     stocks = raw_data["stocks"].copy()
     stock_info = raw_data["stock_info"].copy()
     daily_stocks = raw_data["daily_stocks"].copy()
@@ -372,6 +456,27 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         print("DAILY GAINERS: \n", daily_gainers.head())
         print("DAILY LOSERS: \n", daily_losers.head())
 
+    # ----- BUYING OPPORTUNITIES LOGIC -----
+
+    # 1. Re-Buying Opportunities (Stocks you already own)
+    # We use stocks_complete because it has current price, 52w high, etc.
+    rebuy_df = calculate_buying_opportunity_scores(stocks_complete,
+                                                   portfolio_cash=5000)  # Replace 5000 with real cash var if available
+
+    # 2. New Buying Opportunities (Watchlist)
+    # Since you don't have a 'watchlist.csv' yet, we will just use
+    # any stock in 'stock_info' that is NOT in 'stocks'
+    owned_tickers = stocks["stock"].unique()
+    watchlist_df = stock_info[~stock_info["stock"].isin(owned_tickers)].copy()
+
+    # We need 'price' for the score. stock_info usually is static metadata.
+    # For now, we return empty unless stock_info has live price data.
+    # Assuming we might not have live price for watchlist yet:
+    new_buy_df = pd.DataFrame()
+    if "price" in watchlist_df.columns:
+        # If you add a script to update watchlist prices, this works:
+        new_buy_df = calculate_buying_opportunity_scores(watchlist_df)
+
     # ----- Sector / industry lookups -----
 
     stock_sector_industry = pd.DataFrame()
@@ -493,10 +598,11 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     # ----- Return everything you might want in the app -----
 
     return {
-        "stock_dictionary": stock_dictionary,
         "stocks": stocks,
         "stock_info": stock_info,
         "stocks_complete": stocks_complete,
+        "rebuying_opportunities": rebuy_df,
+        "buying_opportunities": new_buy_df,
         "daily_stocks": daily_stocks,
         "daily_stocks_complete": daily_stocks_complete,
         "daily_equity": daily_equity,
@@ -522,3 +628,4 @@ def load_and_preprocess_data() -> Dict[str, Any]:
     """
     raw_data = load_main_data()
     return preprocess_data(raw_data)
+
