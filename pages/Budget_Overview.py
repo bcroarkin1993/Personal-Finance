@@ -3,9 +3,14 @@ import pandas as pd
 import altair as alt
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data
+# IMPORT NAVIGATION
+from scripts.navigation import make_sidebar
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide")
+
+# ----------------- INJECT SIDEBAR ----------------- #
+make_sidebar("Budget Overview")
 
 st.title("💸 Budget Overview")
 
@@ -24,7 +29,6 @@ if "source" in income_df.columns:
 # --- Helper to clean numeric columns ---
 def clean_amount_column(df):
     if "amount" in df.columns:
-        # Convert to string, remove '$' and ',' and handle negative parentheses '(100)' -> '-100'
         df["amount"] = df["amount"].astype(str).str.replace(r"[$,]", "", regex=True)
         df["amount"] = df["amount"].str.replace(r"^\((.*)\)$", r"-\1", regex=True)
         df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
@@ -46,7 +50,6 @@ with st.container():
     st.subheader("Filters")
     f_col1, f_col2 = st.columns(2)
 
-    # 1. Date Range Filter
     if not income_df.empty and not expenses_df.empty:
         min_date = min(income_df["date"].min(), expenses_df["date"].min())
         max_date = max(income_df["date"].max(), expenses_df["date"].max())
@@ -69,7 +72,6 @@ with st.container():
         else:
             start_date, end_date = default_start, default_end
 
-    # 2. Expense Category Filter
     unique_categories = sorted(expenses_df["category"].dropna().astype(str).unique().tolist())
 
     with f_col2:
@@ -80,8 +82,6 @@ with st.container():
         )
 
 # ----------------- DATA PROCESSING ----------------- #
-
-# Filter Data based on selection
 mask_income = (income_df["date"].dt.date >= start_date) & (income_df["date"].dt.date <= end_date)
 filtered_income = income_df.loc[mask_income]
 
@@ -92,7 +92,6 @@ mask_expenses = (
 )
 filtered_expenses = expenses_df.loc[mask_expenses]
 
-# Aggregation: Group by Month-Year for the chart
 income_monthly = (
     filtered_income.set_index("date")
         .resample("MS")["amount"]
@@ -109,18 +108,13 @@ expenses_monthly = (
         .rename(columns={"amount": "Expenses"})
 )
 
-# Merge into a single timeframe for plotting
 chart_data = pd.merge(income_monthly, expenses_monthly, on="date", how="outer").fillna(0.0)
-
-# Calculate Metric: Savings Rate %
-# Ensure strictly float math
 chart_data["Net_Savings"] = chart_data["Income"] - chart_data["Expenses"]
 chart_data["Savings_Rate"] = chart_data.apply(
     lambda x: (x["Net_Savings"] / x["Income"]) if x["Income"] > 0 else 0.0, axis=1
 )
 
 # ----------------- MAIN CHART SECTION ----------------- #
-
 st.divider()
 st.subheader("Income vs. Expenses Trend")
 
@@ -134,7 +128,6 @@ if not chart_data.empty:
 
     hover = alt.selection_point(fields=["date"], nearest=True, on="mouseover", empty="none")
 
-    # Layer 1: Lines
     lines = (
         alt.Chart(base_chart_data)
             .mark_line(point=True)
@@ -142,15 +135,11 @@ if not chart_data.empty:
             x=alt.X("date:T", axis=alt.Axis(format="%b %Y", title="Date")),
             y=alt.Y("Amount:Q", axis=alt.Axis(title="Amount ($)")),
             color=alt.Color("Type:N", scale=alt.Scale(domain=["Income", "Expenses"], range=["#2ecc71", "#e74c3c"])),
-            tooltip=[
-                alt.Tooltip("date:T", format="%b %Y"),
-                alt.Tooltip("Type:N"),
-                alt.Tooltip("Amount:Q", format="$,.2f")
-            ]
+            tooltip=[alt.Tooltip("date:T", format="%b %Y"), alt.Tooltip("Type:N"),
+                     alt.Tooltip("Amount:Q", format="$,.2f")]
         )
     )
 
-    # Layer 2: Savings Rate Area
     savings_area = (
         alt.Chart(chart_data)
             .mark_area(opacity=0.15, interpolate="monotone")
@@ -158,10 +147,8 @@ if not chart_data.empty:
             x="date:T",
             y=alt.Y("Savings_Rate:Q", axis=alt.Axis(title="Savings Rate %", format="%")),
             color=alt.value("#3498db"),
-            tooltip=[
-                alt.Tooltip("date:T", format="%b %Y"),
-                alt.Tooltip("Savings_Rate:Q", title="Savings Rate", format=".1%")
-            ]
+            tooltip=[alt.Tooltip("date:T", format="%b %Y"),
+                     alt.Tooltip("Savings_Rate:Q", title="Savings Rate", format=".1%")]
         )
     )
 
@@ -173,8 +160,6 @@ if not chart_data.empty:
     )
 
     st.altair_chart(combined_chart, use_container_width=True)
-
-    # ----------------- SUMMARY METRICS ----------------- #
 
     st.markdown("### 📊 Snapshot (Selected Period)")
 
@@ -191,17 +176,12 @@ if not chart_data.empty:
 
     st.divider()
 
-    # ----------------- DATA TABLE ----------------- #
     with st.expander("View Underlying Data"):
         st.dataframe(
             chart_data[["date", "Income", "Expenses", "Net_Savings", "Savings_Rate"]]
                 .sort_values("date", ascending=False)
-                .style.format({
-                "Income": "${:,.2f}",
-                "Expenses": "${:,.2f}",
-                "Net_Savings": "${:,.2f}",
-                "Savings_Rate": "{:.1%}"
-            })
+                .style.format(
+                {"Income": "${:,.2f}", "Expenses": "${:,.2f}", "Net_Savings": "${:,.2f}", "Savings_Rate": "{:.1%}"})
         )
 else:
     st.info("No data available for the selected range.")

@@ -1,14 +1,76 @@
 Amount,Date,Expense_Category,Description
+334.48,2025-12-01 00:00:00,Disposable,Flight to Austin
+412.48,2025-12-01 00:00:00,Disposable,Flight to DCA
+41.0,2025-12-01 00:00:00,Charity,Save the Children
+100.0,2025-12-01 00:00:00,Car,Monthly Parking
+1374.0,2025-12-01 00:00:00,Rent,Monthly Rent
+123.41,2025-12-01 00:00:00,Utilities,Monthly Utilities
+18.49,2025-12-01 00:00:00,Subscriptions,HBO Max
+6.85,2025-12-03 00:00:00,Disposable,Amazon Fresh
+11.99,2025-12-03 00:00:00,Subscriptions,Spotify
+59.91,2025-12-02 00:00:00,Disposable,Alamo Drafthouse
+30.9,2025-12-04 00:00:00,Car,EZ-Pass
 41.0,2025-11-01 00:00:00,Charity,Save the Children
-7.0,2025-11-02 00:00:00,Disposable,Chipotle
-39.18,2025-11-02 00:00:00,Disposable,Amazon Marketplace
 47.61,2025-11-01 00:00:00,Disposable,Nando's
 7.0,2025-11-02 00:00:00,Disposable,Chipotle
+39.18,2025-11-02 00:00:00,Disposable,Amazon Marketplace
+7.0,2025-11-02 00:00:00,Disposable,Chipotle
+78.32000000000001,2025-11-02 00:00:00,Disposable,Sligo Golf Course
+11.99,2025-11-02 00:00:00,Subscriptions,Spotify
 35.0,2025-11-03 00:00:00,Disposable,Strava gear
 1370.0,2025-11-03 00:00:00,Rent,Monthly Rent
 100.0,2025-11-03 00:00:00,Car,Monthly Parking
 143.04000000000002,2025-11-03 00:00:00,Utilities,Monthly Utilities
-78.32000000000001,2025-11-02 00:00:00,Disposable,Sligo Golf Course
+31.08,2025-11-03 00:00:00,Car,Gas
+66.0,2025-11-03 00:00:00,Disposable,Giant
+41.0,2025-11-07 00:00:00,Disposable,Lyft from airport
+8.0,2025-11-07 00:00:00,Disposable,Billiards
+27.15,2025-11-07 00:00:00,Disposable,Chinese food
+70.0,2025-11-07 00:00:00,Disposable,Soccer registration
+67.84,2025-11-08 00:00:00,Disposable,Convivo Restaurant
+29.15,2025-11-08 00:00:00,Disposable,Mesa Café
+32.0,2025-11-08 00:00:00,Disposable,Bowlero
+21.0,2025-11-08 00:00:00,Disposable,Metro 4 Theatre
+130.0,2025-11-08 00:00:00,Disposable,Landini Brothers
+50.41,2025-11-09 00:00:00,Disposable,Aegean Restaurant
+24.4,2025-11-09 00:00:00,Disposable,Mesa Café
+55.0,2025-11-09 00:00:00,Disposable,Dargan's Irish Pub
+10.0,2025-11-09 00:00:00,Disposable,Cliff Room
+77.0,2025-11-10 00:00:00,Disposable,Pedal Haus Brewery
+31.0,2025-11-10 00:00:00,Disposable,Mesa Café
+622.3,2025-11-10 00:00:00,Disposable,AirBnB - Santa Barbara
+425.0,2025-11-11 00:00:00,Disposable,AirBnB - Maclay's Austin bachelor party
+12.99,2025-11-12 00:00:00,Subscriptions,VPN
+29.0,2025-11-12 00:00:00,Disposable,First Class Concession
+16.86,2025-11-12 00:00:00,Disposable,Doordash
+20.0,2025-11-14 00:00:00,Subscriptions,ChatGPT
+28.0,2025-11-14 00:00:00,Disposable,Lyft home
+17.99,2025-11-14 00:00:00,Subscriptions,Netflix
+13.46,2025-11-15 00:00:00,Disposable,Raising Cane's
+13.93,2025-11-16 00:00:00,Disposable,Bodo's Bagels
+17.28,2025-11-16 00:00:00,Car,Gas
+60.0,2025-11-16 00:00:00,Pets,Chewy - cat food
+45.0,2025-11-17 00:00:00,Disposable,Giant
+112.0,2025-11-18 00:00:00,Disposable,Bar Colline
+45.0,2025-11-18 00:00:00,Utilities,Verizon
+71.53,2025-11-19 00:00:00,Disposable,GNC - pre-workout
+2.99,2025-11-20 00:00:00,Subscriptions,OneDrive
+13.0,2025-11-21 00:00:00,Disposable,Lyft home
+75.0,2025-11-21 00:00:00,Disposable,La Posada
+224.08,2025-11-21 00:00:00,Disposable,Costco
+20.82,2025-11-22 00:00:00,Disposable,Alamo
+15.0,2025-11-25 00:00:00,Subscriptions,One Medical
+13.99,2025-11-25 00:00:00,Subscriptions,Youtube Premium
+16.0,2025-11-26 00:00:00,Disposable,Lyft home
+10.99,2025-11-27 00:00:00,Subscriptions,Peacock
+9.99,2025-11-28 00:00:00,Subscriptions,Uber One
+14.37,2025-11-29 00:00:00,Disposable,Uber to Franklin Hall
+95.9,2025-11-29 00:00:00,Disposable,Sisters Thai
+30.87,2025-11-29 00:00:00,Disposable,Franklin Hall
+67.02,2025-11-29 00:00:00,Disposable,Founding Farmers
+15.96,2025-11-30 00:00:00,Disposable,Uber home
+12.99,2025-11-30 00:00:00,Subscriptions,Paramount+
+59.36,2025-11-30 00:00:00,Disposable,Wedding license
 36.0,2025-10-01 00:00:00,Disposable,Hair Cuttery
 41.0,2025-10-01 00:00:00,Charity,Save the Children
 16.99,2025-10-01 00:00:00,Subscriptions,HBO Max
@@ -406,6 +468,56 @@ Amount,Date,Expense_Category,Description
 9.99,2025-03-28 00:00:00,Subscriptions,Uber One
 16.0,2025-03-29 00:00:00,Disposable,Chipotle
 29.99,2025-03-05 00:00:00,Subscriptions,Coinbase
+41.0,2025-04-01 00:00:00,Charity,Save the Children
+100.0,2025-04-01 00:00:00,Car,Monthly Parking
+131.61,2025-04-01 00:00:00,Utilities,Monthly Utilities
+1382.5,2025-04-01 00:00:00,Rent,Monthly rent
+198.0,2025-04-01 00:00:00,Disposable,Turbo Tax
+99.26,2025-04-01 00:00:00,Disposable,Costco
+4.0,2025-04-01 00:00:00,Subscriptions,Washington Post
+11.99,2025-04-02 00:00:00,Subscriptions,Spotify
+20.0,2025-04-03 00:00:00,Disposable,Dudley's
+37.5,2025-04-03 00:00:00,Disposable,Hair Cuttery
+5.93,2025-04-04 00:00:00,Disposable,Lime ride
+17.03,2025-04-05 00:00:00,Disposable,Running gels
+31.87,2025-04-05 00:00:00,Car,Gas
+11.0,2025-04-06 00:00:00,Disposable,Chipotle
+33.0,2025-04-06 00:00:00,Disposable,DC drinks
+3.39,2025-04-07 00:00:00,Disposable,Valkryie
+94.68,2025-04-08 00:00:00,Disposable,Mi Vida
+20.0,2025-04-09 00:00:00,Charity,AP
+4996.59,2025-04-09 00:00:00,Disposable,Bachelor AirBnB
+857.43,2025-04-12 00:00:00,Car,Geico insurance
+43.29,2025-04-12 00:00:00,Disposable,Giant
+17.99,2025-04-15 00:00:00,Subscriptions,Netflix
+240.0,2025-04-15 00:00:00,Disposable,La'Shukran
+223.17,2025-04-17 00:00:00,Disposable,Costco
+59.99,2025-04-18 00:00:00,Subscriptions,Dashlane
+2.99,2025-04-20 00:00:00,Subscriptions,OneDrive
+16.99,2025-04-20 00:00:00,Subscriptions,Disney+
+110.0,2025-04-20 00:00:00,Disposable,Weed
+63.58,2025-04-21 00:00:00,Disposable,GNC
+99.99,2025-04-23 00:00:00,Subscriptions,Chess.com
+45.0,2025-04-23 00:00:00,Utilities,Verizon
+16.01,2025-04-24 00:00:00,Disposable,Sweetgreen
+13.99,2025-04-25 00:00:00,Subscriptions,Youtube Premium
+126.77,2025-04-26 00:00:00,Disposable,Huel
+50.0,2025-04-26 00:00:00,Car,EZ-Pass
+773.12,2025-04-27 00:00:00,Disposable,Landsdowne Resort
+80.61,2025-04-27 00:00:00,Disposable,Uber Eats - China House
+7.99,2025-04-27 00:00:00,Subscriptions,Peacock
+28.05,2025-04-28 00:00:00,Disposable,Sweetgreen
+18.78,2025-04-28 00:00:00,Car,Gas
+9.99,2025-04-28 00:00:00,Subscriptions,Uber One
+26.45,2025-04-28 00:00:00,Car,Gas
+12.99,2025-04-28 00:00:00,Subscriptions,Paramount+
+20.0,2025-04-28 00:00:00,Subscriptions,ChatGPT
+17.99,2025-04-29 00:00:00,Subscriptions,Runna
+16.99,2025-04-29 00:00:00,Subscriptions,HBO Max
+4.0,2025-04-29 00:00:00,Subscriptions,Washington Post
+442.36,2025-04-29 00:00:00,Disposable,Flights to/from Tahoe
+200.0,2025-04-30 00:00:00,Disposable,Wedding gift
+40.0,2025-04-30 00:00:00,Pets,Cat food
 14.22,2025-02-01 00:00:00,Disposable,Uber home
 41.0,2025-02-01 00:00:00,Charity,Save the Children
 206.08,2025-02-01 00:00:00,Disposable,Gypsy Kitchen
@@ -3193,56 +3305,6 @@ Amount,Date,Expense_Category,Description
 9.6,2020-04-27 00:00:00,Utilities,Renters
 25.3,2020-04-26 00:00:00,Utilities,Utilities
 99.99,2020-04-24 00:00:00,Disposable,Chess.com membership
-41.0,2025-04-01 00:00:00,Charity,Save the Children
-100.0,2025-04-01 00:00:00,Car,Monthly Parking
-131.61,2025-04-01 00:00:00,Utilities,Monthly Utilities
-1382.5,2025-04-01 00:00:00,Rent,Monthly rent
-198.0,2025-04-01 00:00:00,Disposable,Turbo Tax
-99.26,2025-04-01 00:00:00,Disposable,Costco
-4.0,2025-04-01 00:00:00,Subscriptions,Washington Post
-11.99,2025-04-02 00:00:00,Subscriptions,Spotify
-20.0,2025-04-03 00:00:00,Disposable,Dudley's
-37.5,2025-04-03 00:00:00,Disposable,Hair Cuttery
-5.93,2025-04-04 00:00:00,Disposable,Lime ride
-17.03,2025-04-05 00:00:00,Disposable,Running gels
-31.87,2025-04-05 00:00:00,Car,Gas
-11.0,2025-04-06 00:00:00,Disposable,Chipotle
-33.0,2025-04-06 00:00:00,Disposable,DC drinks
-3.39,2025-04-07 00:00:00,Disposable,Valkryie
-94.68,2025-04-08 00:00:00,Disposable,Mi Vida
-20.0,2025-04-09 00:00:00,Charity,AP
-4996.59,2025-04-09 00:00:00,Disposable,Bachelor AirBnB
-857.43,2025-04-12 00:00:00,Car,Geico insurance
-43.29,2025-04-12 00:00:00,Disposable,Giant
-17.99,2025-04-15 00:00:00,Subscriptions,Netflix
-240.0,2025-04-15 00:00:00,Disposable,La'Shukran
-223.17,2025-04-17 00:00:00,Disposable,Costco
-59.99,2025-04-18 00:00:00,Subscriptions,Dashlane
-2.99,2025-04-20 00:00:00,Subscriptions,OneDrive
-16.99,2025-04-20 00:00:00,Subscriptions,Disney+
-110.0,2025-04-20 00:00:00,Disposable,Weed
-63.58,2025-04-21 00:00:00,Disposable,GNC
-99.99,2025-04-23 00:00:00,Subscriptions,Chess.com
-45.0,2025-04-23 00:00:00,Utilities,Verizon
-16.01,2025-04-24 00:00:00,Disposable,Sweetgreen
-13.99,2025-04-25 00:00:00,Subscriptions,Youtube Premium
-126.77,2025-04-26 00:00:00,Disposable,Huel
-50.0,2025-04-26 00:00:00,Car,EZ-Pass
-773.12,2025-04-27 00:00:00,Disposable,Landsdowne Resort
-80.61,2025-04-27 00:00:00,Disposable,Uber Eats - China House
-7.99,2025-04-27 00:00:00,Subscriptions,Peacock
-28.05,2025-04-28 00:00:00,Disposable,Sweetgreen
-18.78,2025-04-28 00:00:00,Car,Gas
-9.99,2025-04-28 00:00:00,Subscriptions,Uber One
-26.45,2025-04-28 00:00:00,Car,Gas
-12.99,2025-04-28 00:00:00,Subscriptions,Paramount+
-20.0,2025-04-28 00:00:00,Subscriptions,ChatGPT
-17.99,2025-04-29 00:00:00,Subscriptions,Runna
-16.99,2025-04-29 00:00:00,Subscriptions,HBO Max
-4.0,2025-04-29 00:00:00,Subscriptions,Washington Post
-442.36,2025-04-29 00:00:00,Disposable,Flights to/from Tahoe
-200.0,2025-04-30 00:00:00,Disposable,Wedding gift
-40.0,2025-04-30 00:00:00,Pets,Cat food
 14.78,2020-03-01 00:00:00,Disposable,Lyft home from DC
 15.48,2020-03-01 00:00:00,Disposable,Rasa
 5.0,2020-03-02 00:00:00,Disposable,Dudley's

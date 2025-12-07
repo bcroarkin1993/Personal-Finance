@@ -1,321 +1,249 @@
 import streamlit as st
 import pandas as pd
-import datetime
+import altair as alt
 import plotly.express as px
-import matplotlib.pyplot as plt
-import numpy as np
-from ..scripts.data_processing import load_and_preprocess_data
+from datetime import date, timedelta
+from scripts.data_processing import load_and_preprocess_data
+from scripts.navigation import make_sidebar
 
-### FORMAT STREAMLIT PAGE ###
-st.set_page_config(layout="wide")
-# Title
-st.title("Portfolio Overview")
+# ----------------- PAGE CONFIG ----------------- #
+st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wide")
 
-### PULL IN & FORMAT DATA ###
+# ----------------- INJECT SIDEBAR ----------------- #
+make_sidebar("Portfolio Overview")
 
-# Load preprocessed data
+st.title("📈 Portfolio Overview")
+
+# ----------------- DATA LOADING ----------------- #
 data = load_and_preprocess_data()
+stocks_complete = data["stocks_complete"].copy()
+daily_stocks = data["daily_stocks"].copy()
+daily_equity = data.get("daily_equity", pd.DataFrame())
 
-# Access dataframes
-stocks = data["stocks"]
-stock_info = data["stock_info"]
-daily_stocks = data["daily_stocks"]
-stocks_complete = data["stocks_complete"]
+# ----------------- DATA CLEANING (SNAKE_CASE FIX) ----------------- #
+# The data loader converts columns to snake_case (e.g., Market_Value -> market_value)
+# We ensure numeric types here using the correct column names.
 
-### CALCULATE KEY VALUES / STATS ###
+# 1. Market Value
+if "market_value" in stocks_complete.columns:
+    stocks_complete["market_value"] = pd.to_numeric(stocks_complete["market_value"], errors="coerce").fillna(0)
+else:
+    # Fallback if column missing
+    stocks_complete["market_value"] = 0.0
 
-# Number of companies
-companies = len(stocks_complete[stocks_complete["Quantity"] > 0])
-# Portfolio Value
-total_portfolio = round(sum(stocks_complete["Market_Value"]), 0)
-total_portfolio_str = "$" + "{:,}".format(total_portfolio)
-# Total Gain / Loss
-total_change = round(sum(stocks_complete["Equity_Change"]), 0)
-total_change_str = "$" + "{:,}".format(total_change)
-# Total Invested Value
-total_invested = round(sum(stocks_complete["Invested"]), 0)
-total_invested_str = "$" + "{:,}".format(total_invested)
-# Percentage Gain / Loss
-pct_change = round(total_change / total_invested, 2) * 100
-pct_change_str = str(pct_change) + "%"
-
-# Number of companies
-companies = len(stocks_complete[stocks_complete["Quantity"] > 0])
-
-# Filter and sort stocks
-stocks_complete = stocks_complete.sort_values("Market_Value", axis = 0, ascending = True)
-stocks_complete = stocks_complete.tail(companies)
-
-# Total Invested Value
-total_invested = round(sum(stocks_complete["Invested"]), 0)
-total_invested_str = "$" + str(total_invested)
-
-### CREATE AND DISPLAY VISUALS ###
-
-# Create display options
-companies = st.slider("Pick Number of Companies", 1, companies)
-
-col1, col2 = st.columns(2)
-
-with col1:
-
-    st.subheader("Top Companies by Market Value")
-
-    # Filter stocks_complete based on filter option
-    stocks_complete = stocks_complete.sort_values("Market_Value", axis=0, ascending=False)
-    stocks_complete = stocks_complete.head(companies)
-
-    # Display Plotly
-    fig = px.bar(stocks_complete, x='Market_Value', y='Stock', color='Equity_Change',
-                 color_continuous_scale='rdylgn', range_color=[-2000, 2000],
-                 hover_name='Stock',
-                 hover_data={
-                     'Market_Value': ':$,.0f',
-                     'Equity_Change': ':$,.0f',
-                     'Stock': False
-                 })
-    fig = fig.update_layout(yaxis=dict(autorange="reversed"), yaxis_title=None, xaxis_title=None, autosize=True)
-    # Plot!
-    st.plotly_chart(fig, use_container_width=True)
-
-with col2:
-
-    st.subheader("52 Week Range")
-    st.subheader("")
-    st.text("")
-
-    # 52 Week Range
-    # Filter to columns of interest
-    range52Week = stocks[['Stock', 'Price', '52_Week_High', '52_Week_Low', 'Market_Value']].copy()
-    # Add dummy columns for the start and stop position
-    range52Week.loc[:, 'Start'] = 0
-    range52Week.loc[:, 'Stop'] = 1
-    # Scale the current price on a 0-1 scale between the 52 week high and low
-    range52Week.loc[:, 'PriceAdjusted'] = (range52Week['Price'] - range52Week['52_Week_Low']) / (
-                range52Week['52_Week_High'] - range52Week['52_Week_Low'])
-    # Filter to top x companies
-    range52Week = range52Week.sort_values(by="Market_Value", ascending=False).head(companies)
-    # Reverse Y-axis order (gets twisted going to horizontal for some reason)
-    range52Week = range52Week.iloc[::-1].reset_index().drop(columns=['index'])
-    # Format dataframe values
-    range52Week['52_Week_High'] = range52Week['52_Week_High'].apply(lambda x: "${:,.2f}".format(x))
-    range52Week['52_Week_Low'] = range52Week['52_Week_Low'].apply(lambda x: "${:.2f}".format(x))
-    range52Week['Price'] = range52Week['Price'].apply(lambda x: "${:,.2f}".format(x))
-
-    # Create bar chart
-    fig = plt.figure()
-    plt.barh(range52Week['Stock'], range52Week['Stop'], height=.02, color='black')
-    # Set figure dimensions
-    fig.set_figwidth(4)
-    fig.set_figheight(2)
-    plt.rc('font', size=5)  # controls default text size
-    # Remove x-axis labels and y-axis ticks
-    plt.xticks([])
-    #plt.yticks([])
-    # Remove border line
-    for pos in ['right', 'top', 'bottom', 'left']:
-        plt.gca().spines[pos].set_visible(False)
-    # Add price marker
-    y_pos = np.arange(len(range52Week['PriceAdjusted']))
-    plt.plot(range52Week['PriceAdjusted'], y_pos, marker="D", linestyle="", alpha=0.8, color="g")
-    # Add price marker labels
-    for index, row in range52Week.iterrows():
-        plt.text(-0.05, index + .1, row['52_Week_Low'])
-        plt.text(.95, index + .1, row['52_Week_High'])
-        #plt.text(row['PriceAdjusted'] - .1, index + .1, row['Price'])
-    # Display bar chart
-    st.pyplot(fig)
-
-col1, col2 = st.columns(2)
-
-with col1:
-
-    # Show Cap Size Ratio
-    fig = px.pie(cap_sizes, values='Market_Value', hole=0.6,
-                 names='CapSize', color='CapSize',
-                 title='Company Cap Sizes')
-    st.plotly_chart(fig, use_container_width=True)
-
-with col2:
-
-    # Show Stock / Crypto Ratio
-    fig = px.pie(todays_stocks, values='Market_Value', hole=0.6,
-                 names='Asset_Type', color='Asset_Type',
-                 title='Stock to Crypto Ratio')
-    st.plotly_chart(fig, use_container_width=True)
-
-# Create display options
-companies = st.slider("Choose Number of Companies", 1, 60)
-
-### BETA BAR CHART ###
-
-# Remove null Beta value companies
-beta_stocks = stocks_complete.dropna(subset=["Beta"])
-# Filter stocks
-beta_stocks = beta_stocks.sort_values("Beta", axis=0, ascending=True)
-beta_stocks = beta_stocks.tail(companies)
-
-# Create Plotly
-fig = px.bar(beta_stocks, x='Beta', y='Stock', title = "Beta Risk by Company", hover_name = 'Stock',
-             hover_data = {
-                 'Market_Value': ':.2f',
-                 'Stock': False
-            })
-
-# Plot!
-st.plotly_chart(fig, use_container_width=True)
-
-### BUY/HOLD/SELL RATING BAR CHART ###
-
-# Filter stocks
-rating_stocks = stocks_complete[['Stock', 'Buy_Ratio', 'Hold_Ratio', 'Sell_Ratio']]
-# Remove null Buy ratio companies
-rating_stocks = rating_stocks.dropna(subset=["Buy_Ratio"])
-# Filter stocks
-rating_stocks = rating_stocks.sort_values("Buy_Ratio", axis = 0, ascending = True)
-rating_stocks = rating_stocks.tail(companies)
-
-# shape from wide to long with melt function in pandas
-rating_stocks = pd.melt(rating_stocks, id_vars=['Stock'], var_name='Rating_Type', value_name='Rating')
-
-# Create Plotly
-fig2 = px.bar(rating_stocks, x = 'Stock', y = 'Rating', color = 'Rating_Type')
-
-# Plot!
-st.plotly_chart(fig2, use_container_width=True)
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    # Portfolio Value
-    st.metric("Portfolio Value", total_portfolio_str)
-
-with col2:
-    # Total Invested Value
-    st.metric("Invested Value", total_invested_str)
-
-with col3:
-    # Total Gain / Loss
-    st.metric("Gain / Loss", total_change_str)
-
-with col4:
-    # Percentage Gain / Loss
-    st.metric("Return on Equity %", pct_change_str)
-
-### CREATE CHARTS ###
-
-col1, col2 = st.columns([3, 1])
-
-with col1:
-    # Give option on date frame to look at
-    date_range = st.selectbox(
-        'Date range:',
-        ('All', '1Y', '3M', '1M', '1W'))
-
-    if date_range == 'All':
-        # Display Plotly
-        customdata = np.array(daily_equity['Total_Profit'])
-        fig = px.line(daily_equity, x='Date', y='Market_Value', title="Portfolio Total Performance")
-        fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-        fig.update_traces(line_color='#189557', customdata=customdata,
-                          hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Market Value</b> = %{y:$.0f}' +
-                                        '<br><b>Total Profit</b> = %{customdata:$.0f}')
-        # Plot!
-        st.plotly_chart(fig, use_container_width=True)
-
-    elif date_range == '1Y':
-        # Filter to last year
-        year = daily_equity[daily_equity.Date > datetime.datetime.now() - pd.to_timedelta("365days")]
-        # Display 1Y Portfolio Performance
-        customdata = np.array(year['Total_Profit'])
-        fig = px.line(year, x='Date', y='Market_Value', title="Portfolio Annual Performance")
-        fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-        fig.update_traces(line_color='#189557', customdata=customdata,
-                          hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Market Value</b> = %{y:$.0f}' +
-                                        '<br><b>Total Profit</b> = %{customdata:$.0f}')
-        # Plot!
-        st.plotly_chart(fig, use_container_width=True)
-
-    elif date_range == '3M':
-        # Filter to last 3 months
-        three_month = daily_equity[daily_equity.Date > datetime.datetime.now() - pd.to_timedelta("90days")]
-        # Display 3M Portfolio Performance
-        customdata = np.array(three_month['Total_Profit'])
-        fig = px.line(three_month, x='Date', y='Market_Value', title="Portfolio 3 Month Performance")
-        fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-        fig.update_traces(line_color='#189557', customdata=customdata,
-                          hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Market Value</b> = %{y:$.0f}' +
-                                        '<br><b>Total Profit</b> = %{customdata:$.0f}')
-        # Plot!
-        st.plotly_chart(fig, use_container_width=True)
-
-    elif date_range == '1M':
-        # Filter to last month
-        month = daily_equity[daily_equity.Date > datetime.datetime.now() - pd.to_timedelta("30days")]
-        # Display 1M Portfolio Performance
-        customdata = np.array(month['Total_Profit'])
-        fig = px.line(month, x='Date', y='Market_Value', title="Portfolio Monthly Performance")
-        fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-        fig.update_traces(line_color='#189557', customdata=customdata,
-                          hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Market Value</b> = %{y:$.0f}' +
-                                        '<br><b>Total Profit</b> = %{customdata:$.0f}')
-        # Plot!
-        st.plotly_chart(fig, use_container_width=True)
-
+# 2. Invested Amount
+# If 'invested' exists from data_processing, use it. Otherwise calculate from qty * avg_cost
+if "invested" not in stocks_complete.columns:
+    if "quantity" in stocks_complete.columns and "avg_cost" in stocks_complete.columns:
+        stocks_complete["invested"] = stocks_complete["quantity"] * stocks_complete["avg_cost"]
     else:
-        # Filter to last week
-        week = daily_equity[daily_equity.Date > datetime.datetime.now() - pd.to_timedelta("7days")]
-        # Display 1M Portfolio Performance
-        customdata = np.array(week['Total_Profit'])
-        fig = px.line(week, x='Date', y='Market_Value', title="Portfolio Weekly Performance")
-        fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-        fig.update_traces(line_color='#189557', customdata=customdata,
-                          hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Market Value</b> = %{y:$.0f}' +
-                                        '<br><b>Total Profit</b> = %{customdata:$.0f}')
-        # Plot!
-        st.plotly_chart(fig, use_container_width=True)
+        stocks_complete["invested"] = 0.0
+else:
+    stocks_complete["invested"] = pd.to_numeric(stocks_complete["invested"], errors="coerce").fillna(0)
 
-with col2:
-    # Show table data
-    st.caption("Top Daily Gainers")
-    st.table(daily_gainers)
+# 3. Equity Change (Profit/Loss)
+# Calculate explicitly to be safe: Market Value - Invested
+stocks_complete["equity_change"] = stocks_complete["market_value"] - stocks_complete["invested"]
 
-    # Show table data
-    st.caption("Top Daily Losers")
-    st.table(daily_losers)
+# ----------------- SECTION 1: SUMMARY METRICS (2x3 GRID) ----------------- #
+st.subheader("At a Glance")
 
-## Format dataframe appearance
-properties = {"border": "0px", "color": "green", "background-color": "white", "font-size": "14px"}
-daily_gainers = daily_gainers.style.set_properties(**properties).set_table_styles([
-    {'selector': '', 'props': [('border-width', '0px')]},
-    {'selector': 'th', 'props': [('border-width', '0px'), ('display', 'none')]},
-]).hide_index()
-# Format table data
-properties = {"border": "0px", "color": "red", "background-color": "white", "font-size": "14px"}
-daily_losers = daily_losers.style.set_properties(**properties).set_table_styles([
-    {'selector': '', 'props': [('border-width', '0px')]},
-    {'selector': 'th', 'props': [('border-width', '0px'), ('display', 'none')]},
-]).hide_index()
+# Calculations
+total_value = stocks_complete["market_value"].sum()
+total_invested = stocks_complete["invested"].sum()
+roe_dollar = total_value - total_invested
+roe_percent = (roe_dollar / total_invested * 100) if total_invested > 0 else 0.0
 
-# Create Plotly for Invested Capital
-customdata = np.array(daily_equity['Total_Profit'])
-fig = px.line(daily_equity, x='Date', y='Equity', title="Invested Capital")
-fig = fig.update_layout(yaxis_title="Market Value", title_x=0.5)
-fig.update_traces(line_color='#189557', customdata=customdata,
-                  hovertemplate='<b>Date</b> = %{x|%Y-%m-%d}<br><b>Equity</b> = %{y:$.0f}')
-# Display Plotly
-st.plotly_chart(fig, use_container_width=True)
+# Count active positions (quantity > 0)
+if "quantity" in stocks_complete.columns:
+    num_companies = len(stocks_complete[stocks_complete["quantity"] > 0])
+else:
+    num_companies = 0
 
-# Format and Show table data
-stocks_complete = stocks_complete.rename(columns = {"Company_x": "Company", "Stock": "Ticker", "Avg_Cost": "Avg Cost",
-                                                    "Market_Value": "Market Value", "Equity_Change": "Equity Change",
-                                                    "Percent_Change": "Percent Change", "52_Week_High": "52 Week High",
-                                                    "52_Week_Low": "52 Week Low", "Asset_Type": "Asset Type",
-                                                    "Market_Cap": "Market Cap", "Avg_Volume": "Volume", "PE_Ratio":
-                                                    "PE Ratio"})
-stocks_complete = stocks_complete[['Company', 'Quantity', 'Avg Cost', 'Market Value', 'Equity Change', 'Percent Change',
-                                   '52 Week High', '52 Week Low', 'Volume', 'PE Ratio', 'Beta']]
-st.dataframe(stocks_complete.style.format({"Quantity": "{:.2f}", "Avg Cost": "${:.2f}", "Market Value": "${:.2f}",
-                                           "Equity Change": "${:.2f}", "Percent Change": "{:.0%}",
-                                           "52 Week High": "${:.2f}", "52 Week Low": "${:.2f}", "Volume": "${:.2f}",
-                                           "PE Ratio": "{:.2f}", "Beta": "{:.2f}"}))
+# Avg Dividend Yield (handle missing data)
+if "dividend_yield" in stocks_complete.columns:
+    avg_div_yield = stocks_complete["dividend_yield"].mean() * 100  # Convert dec to %
+else:
+    avg_div_yield = 0.0
+
+# Row 1
+r1c1, r1c2, r1c3 = st.columns(3)
+r1c1.metric("Total Portfolio Value", f"${total_value:,.2f}")
+r1c2.metric("Amount Invested", f"${total_invested:,.2f}")
+r1c3.metric("Return on Equity ($)", f"${roe_dollar:,.2f}", delta=f"${roe_dollar:,.2f}")
+
+# Row 2
+r2c1, r2c2, r2c3 = st.columns(3)
+r2c1.metric("Rate of Return (%)", f"{roe_percent:.2f}%", delta=f"{roe_percent:.2f}%")
+r2c2.metric("Number of Companies", f"{num_companies}")
+r2c3.metric("Avg Dividend Yield", f"{avg_div_yield:.2f}%")
+
+st.markdown("---")
+
+# ----------------- SECTION 2: PORTFOLIO TREND (ALTAIR) ----------------- #
+st.subheader("📉 Portfolio Trend Over Time")
+
+if not daily_equity.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity.columns):
+    chart_df = daily_equity.copy()
+    chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
+    chart_df = chart_df.sort_values("date")
+
+    # Altair chart
+    chart = (
+        alt.Chart(chart_df)
+            .mark_line(point=True)
+            .encode(
+            x=alt.X(
+                "date:T",
+                axis=alt.Axis(format="%b %y", title="Date"),
+            ),
+            y=alt.Y("market_value:Q", title="Portfolio Value"),
+            color=alt.condition(
+                "datum.total_profit >= 0",
+                alt.value("#2ecc71"),  # green
+                alt.value("#e74c3c"),  # red
+            ),
+            tooltip=[
+                alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),
+                alt.Tooltip("market_value:Q", title="Portfolio Value", format=",.2f"),
+                alt.Tooltip("total_profit:Q", title="Total Profit", format=",.2f"),
+            ],
+        )
+            .properties(height=350)
+    )
+
+    st.altair_chart(chart, use_container_width=True)
+else:
+    st.info("No portfolio history available yet.")
+
+st.markdown("---")
+
+# ----------------- SECTION 3: ASSET ALLOCATION (BAR GRAPH) ----------------- #
+st.subheader("🏆 Top Assets (Market Value vs. Return)")
+
+if not stocks_complete.empty:
+    # Sort by Market Value
+    asset_chart_data = stocks_complete.sort_values("market_value", ascending=False).head(20)  # Top 20
+
+    # Calculate Percent Return for color scale
+    asset_chart_data["return_pct"] = asset_chart_data.apply(
+        lambda x: ((x["market_value"] - x["invested"]) / x["invested"] * 100) if x["invested"] > 0 else 0,
+        axis=1
+    )
+
+    fig_assets = px.bar(
+        asset_chart_data,
+        x="stock",
+        y="market_value",
+        color="return_pct",
+        color_continuous_scale="RdYlGn",  # Red to Green
+        range_color=[-50, 50],  # Cap color scale at +/- 50% for visibility
+        title="Top Holdings by Value (Colored by % Return)",
+        labels={"market_value": "Current Value ($)", "return_pct": "Return %", "stock": "Ticker"},
+        hover_data={"invested": ":$,.2f", "market_value": ":$,.2f", "return_pct": ":.2f%"}
+    )
+
+    fig_assets.update_layout(xaxis_title=None)
+    st.plotly_chart(fig_assets, use_container_width=True)
+
+st.markdown("---")
+
+# ----------------- SECTION 4: GAINERS / LOSERS (DYNAMIC TIME) ----------------- #
+st.subheader("🔥 Movers & Shakers")
+
+# Date Range Selector
+time_frame = st.radio(
+    "Calculate Performance Over:",
+    ["1 Day", "1 Week", "1 Month", "3 Months", "1 Year", "YTD"],
+    horizontal=True
+)
+
+
+# Helper to calculate performance dataframe
+def get_performance_df(daily_df, days_lookback=None, is_ytd=False):
+    if daily_df.empty:
+        return pd.DataFrame()
+
+    daily_df["date"] = pd.to_datetime(daily_df["date"])
+    daily_df = daily_df.sort_values("date")
+
+    max_date = daily_df["date"].max()
+
+    if is_ytd:
+        start_date = date(max_date.year, 1, 1)
+    else:
+        start_date = max_date - timedelta(days=days_lookback)
+
+    # Get Prices at End Date
+    end_prices = daily_df[daily_df["date"] == max_date][["stock", "close"]].rename(columns={"close": "End_Price"})
+
+    # Get Prices nearest to Start Date (without going future)
+    history_subset = daily_df[daily_df["date"] <= pd.Timestamp(start_date)]
+    if history_subset.empty:
+        history_subset = daily_df.copy()
+
+    latest_dates = history_subset.groupby("stock")["date"].max().reset_index()
+    start_prices_raw = pd.merge(daily_df, latest_dates, on=["stock", "date"])
+    start_prices = start_prices_raw[["stock", "close"]].rename(columns={"close": "Start_Price"})
+
+    # Merge
+    perf_df = pd.merge(end_prices, start_prices, on="stock", how="inner")
+
+    # Calc Change
+    perf_df["Abs_Change"] = perf_df["End_Price"] - perf_df["Start_Price"]
+    perf_df["Pct_Change"] = (perf_df["Abs_Change"] / perf_df["Start_Price"]) * 100
+
+    return perf_df
+
+
+# Logic for Lookback
+lookback_map = {
+    "1 Day": 1,
+    "1 Week": 7,
+    "1 Month": 30,
+    "3 Months": 90,
+    "1 Year": 365
+}
+
+if "daily_stocks" in data and not daily_stocks.empty:
+    if time_frame == "YTD":
+        perf_df = get_performance_df(daily_stocks, is_ytd=True)
+    else:
+        perf_df = get_performance_df(daily_stocks, days_lookback=lookback_map[time_frame])
+
+    if not perf_df.empty:
+        col_g, col_l = st.columns(2)
+
+        with col_g:
+            st.write(f"**Top Gainers ({time_frame})**")
+            gainers = perf_df.sort_values("Pct_Change", ascending=False).head(10)
+            st.dataframe(
+                gainers[["stock", "Start_Price", "End_Price", "Pct_Change"]]
+                    .style.format({
+                    "Start_Price": "${:,.2f}",
+                    "End_Price": "${:,.2f}",
+                    "Pct_Change": "{:+.2f}%"
+                })
+                    .background_gradient(subset=["Pct_Change"], cmap="Greens"),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        with col_l:
+            st.write(f"**Top Losers ({time_frame})**")
+            losers = perf_df.sort_values("Pct_Change", ascending=True).head(10)
+            st.dataframe(
+                losers[["stock", "Start_Price", "End_Price", "Pct_Change"]]
+                    .style.format({
+                    "Start_Price": "${:,.2f}",
+                    "End_Price": "${:,.2f}",
+                    "Pct_Change": "{:+.2f}%"
+                })
+                    .background_gradient(subset=["Pct_Change"], cmap="Reds_r"),
+                use_container_width=True,
+                hide_index=True
+            )
+    else:
+        st.warning("Not enough historical data to calculate performance for this period.")
+else:
+    st.info("No daily stock history available (daily_stocks.csv). Run the investment data processor.")
