@@ -6,16 +6,16 @@ import streamlit as st
 import altair as alt
 
 from scripts.data_processing import load_and_preprocess_data
+from scripts.navigation import make_sidebar
 from scripts.utils import (
     calculate_average_monthly_total,
     calculate_yearly_total,
     get_last_refresh_date_from_df,
     get_portfolio_snapshot
 )
-# IMPORT THE NEW NAVIGATION MODULE
-from scripts.navigation import make_sidebar
 
 # ----------------- PAGE CONFIG ----------------- #
+
 st.set_page_config(
     page_title="Personal Finance Tracker",
     page_icon="💰",
@@ -23,14 +23,14 @@ st.set_page_config(
 )
 
 # ----------------- INJECT SIDEBAR ----------------- #
-# This replaces all the previous manual sidebar code
+# This renders the centralized navigation
 make_sidebar("Home")
 
 # ----------------- CUSTOM STYLING ----------------- #
-# (Kept your custom styling, but removed the manual sidebar hide since nav.py handles it)
 st.markdown(
     """
     <style>
+    /* Hero gradient background */
     .hero-container {
         padding: 1.5rem 1.75rem;
         border-radius: 18px;
@@ -56,6 +56,8 @@ st.markdown(
         font-size: 0.8rem;
         margin-bottom: 0.5rem;
     }
+
+    /* Metric cards */
     div[data-testid="metric-container"] {
         background-color: #0b1621;
         padding: 10px 14px;
@@ -71,12 +73,16 @@ st.markdown(
         font-weight: 600;
         overflow-wrap: anywhere;
     }
+
+    /* Section titles */
     .section-title {
         font-size: 1.2rem;
         font-weight: 600;
         margin-top: 0.75rem;
         margin-bottom: 0.25rem;
     }
+
+    /* Small label text */
     .muted-label {
         font-size: 0.8rem;
         opacity: 0.7;
@@ -86,14 +92,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ----------------- HOME PAGE (LANDING) ----------------- #
+# ----------------- HOME PAGE LOGIC ----------------- #
 
+# Load data safely (returns empty DFs if files missing)
 data: Dict[str, Any] = load_and_preprocess_data()
-income_df: pd.DataFrame = data["income"]
-expenses_df: pd.DataFrame = data["expenses"]
-daily_stocks_df: pd.DataFrame = data["daily_stocks"]
+
+income_df: pd.DataFrame = data.get("income", pd.DataFrame())
+expenses_df: pd.DataFrame = data.get("expenses", pd.DataFrame())
+daily_stocks_df: pd.DataFrame = data.get("daily_stocks", pd.DataFrame())
 daily_equity_df: pd.DataFrame = data.get("daily_equity", pd.DataFrame())
 
+# Check for empty state to guide the user
+if income_df.empty and expenses_df.empty and daily_stocks_df.empty:
+    st.warning(
+        """
+        ⚠️ **No data found.**
+
+        It looks like your data files are missing or empty. 
+        Please ensure your `Budget.xlsx` and `stock_dictionary.json` are in the `data/` folder, 
+        then click the **Refresh** buttons below to process them.
+        """
+    )
+
+# Calculate Budget Metrics
 avg_monthly_income = calculate_average_monthly_total(income_df)
 avg_monthly_expenses = calculate_average_monthly_total(expenses_df)
 annual_income = calculate_yearly_total(income_df)
@@ -106,12 +127,14 @@ else:
 
 last_expenses_refresh = get_last_refresh_date_from_df(expenses_df, "date")
 
+# Calculate Investment Metrics
 portfolio_snapshot = get_portfolio_snapshot(data)
 total_portfolio_value = portfolio_snapshot["total_portfolio_value"]
 total_equity = portfolio_snapshot["total_equity"]
 total_profit = portfolio_snapshot["total_profit"]
 last_investment_refresh = get_last_refresh_date_from_df(daily_stocks_df, "date")
 
+# ----------------- HERO SECTION ----------------- #
 st.markdown(
     """
     <div class="hero-container">
@@ -125,6 +148,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ----------------- HIGH-LEVEL SNAPSHOT ----------------- #
 st.markdown('<div class="section-title">Today at a Glance</div>', unsafe_allow_html=True)
 top_col1, top_col2, top_col3, top_col4 = st.columns(4)
 
@@ -137,6 +161,7 @@ with top_col2:
     st.markdown('<span class="muted-label">Across all categories</span>', unsafe_allow_html=True)
 
 with top_col3:
+    # Use delta to color the number green/red
     sr_delta = f"{savings_rate:.1f}%" if savings_rate != 0 else None
     st.metric("📊 Savings Rate", f"{savings_rate:.1f}%", delta=sr_delta)
     st.markdown('<span class="muted-label">Income left after expenses</span>', unsafe_allow_html=True)
@@ -145,10 +170,12 @@ with top_col4:
     st.metric("💼 Portfolio Value", f"${total_portfolio_value:,.2f}")
     st.markdown('<span class="muted-label">Latest market value</span>', unsafe_allow_html=True)
 
-st.markdown("")
+st.markdown("")  # spacing
 
+# ----------------- BUDGET & INVESTMENT OVERVIEW SIDE-BY-SIDE ----------------- #
 left, right = st.columns(2)
 
+# ----- Budget Overview Column ----- #
 with left:
     st.markdown('<div class="section-title">💸 Budget Overview</div>', unsafe_allow_html=True)
     st.write(
@@ -172,17 +199,19 @@ with left:
     )
 
     if st.button("🔄 Refresh Budget Data"):
-        try:
-            subprocess.run(
-                ["python", "scripts/process_budget_data.py"],
-                check=True,
-            )
-            load_and_preprocess_data.clear()
-            st.success("Budget data updated. Reloading with fresh data...")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to update budget data: {e}")
+        with st.spinner("Processing Budget.xlsx..."):
+            try:
+                subprocess.run(
+                    ["python", "scripts/process_budget_data.py"],
+                    check=True,
+                )
+                load_and_preprocess_data.clear()
+                st.success("Budget data updated! Reloading...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to update budget data: {e}")
 
+# ----- Investments Overview Column ----- #
 with right:
     st.markdown('<div class="section-title">📈 Investments Overview</div>', unsafe_allow_html=True)
     st.write(
@@ -199,36 +228,41 @@ with right:
     with i2:
         st.metric("Total Equity (Invested)", f"${total_equity:,.2f}")
     with i3:
+        # Use delta to color profit/loss green/red
         pl_delta = f"${total_profit:,.2f}" if total_profit != 0 else None
         st.metric("Total Profit / Loss", f"${total_profit:,.2f}", delta=pl_delta)
+
     st.markdown(
         f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>",
         unsafe_allow_html=True,
     )
 
     if st.button("🔄 Refresh Investment Data"):
-        try:
-            subprocess.run(
-                ["python", "scripts/process_investment_data.py"],
-                check=True,
-            )
-            load_and_preprocess_data.clear()
-            st.success("Investment data updated. Reloading with fresh data...")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to update investment data: {e}")
+        with st.spinner("Fetching market data (Incremental)..."):
+            try:
+                subprocess.run(
+                    ["python", "scripts/process_investment_data.py"],
+                    check=True,
+                )
+                load_and_preprocess_data.clear()
+                st.success("Investment data updated! Reloading...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to update investment data: {e}")
 
+# ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
 st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
 
 if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
     chart_df = daily_equity_df.copy()
     chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
-    chart_df = chart_df.sort_values("date")
+    chart_df = chart_df.dropna(subset=["date"]).sort_values("date")
 
+    # Altair chart with month-year x-axis and profit in tooltip, color by profit sign
     chart = (
         alt.Chart(chart_df)
-        .mark_line(point=True)
-        .encode(
+            .mark_line(point=True)
+            .encode(
             x=alt.X(
                 "date:T",
                 axis=alt.Axis(format="%b %y", title="Date"),
@@ -245,13 +279,18 @@ if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubs
                 alt.Tooltip("total_profit:Q", title="Total Profit", format=",.2f"),
             ],
         )
-        .properties(height=300)
+            .properties(height=300)
     )
 
     st.altair_chart(chart, use_container_width=True)
+    st.markdown(
+        "<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>",
+        unsafe_allow_html=True,
+    )
 else:
-    st.info("No portfolio history available yet.")
+    st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
 
+# ----------------- FOOTER ----------------- #
 st.markdown("---")
 st.write(
     "🔍 **Next step:** Use the sidebar to dive into Budget or Investments and start exploring the details."

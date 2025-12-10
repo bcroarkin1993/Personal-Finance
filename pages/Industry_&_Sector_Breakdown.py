@@ -1,67 +1,128 @@
 import streamlit as st
 import pandas as pd
-import datetime
 import plotly.express as px
+from datetime import date
+from scripts.data_processing import load_and_preprocess_data
+from scripts.navigation import make_sidebar
 
-### FORMAT STREAMLIT PAGE ###
-st.set_page_config(layout="wide")
-# Title
-st.title("Investment Dashboard - Industry")
-# Today's Date
-today = datetime.date.today()
-st.subheader(f"Today's Date is {today}")
+# ----------------- PAGE CONFIG ----------------- #
+st.set_page_config(page_title="Industry & Sector Breakdown", page_icon="🧭", layout="wide")
 
-### PULL IN AND FORMAT DATA ###
+# ----------------- INJECT SIDEBAR ----------------- #
+make_sidebar("Industry & Sector Breakdown")
 
-# Pull in tables from session_state
-todays_stocks_complete = st.session_state['todays_stocks_complete']
-industry_values = st.session_state['industry_values']
-sector_values = st.session_state['sector_values']
+# ----------------- HEADER ----------------- #
+st.title("🧭 Industry & Sector Breakdown")
+st.caption(f"Data as of {date.today().strftime('%B %d, %Y')}")
 
-### CREATE DISPLAY INFORMATION
+# ----------------- DATA LOADING ----------------- #
+data = load_and_preprocess_data()
 
-### PLOT CHARTS ###
+# Extract DataFrames
+# Note: These come from data_processing.py which converts columns to snake_case
+todays_stocks_complete = data.get("todays_stocks_complete", pd.DataFrame()).copy()
+sector_values = data.get("sector_values", pd.DataFrame()).copy()
+industry_values = data.get("industry_values", pd.DataFrame()).copy()
 
-## Pie Charts
+# Ensure numeric types for plotting
+if not todays_stocks_complete.empty:
+    todays_stocks_complete["market_value"] = pd.to_numeric(todays_stocks_complete["market_value"],
+                                                           errors="coerce").fillna(0)
 
-col1, col2 = st.columns(2)
+if not sector_values.empty:
+    sector_values["market_value"] = pd.to_numeric(sector_values["market_value"], errors="coerce").fillna(0)
 
-with col1:
+if not industry_values.empty:
+    industry_values["market_value"] = pd.to_numeric(industry_values["market_value"], errors="coerce").fillna(0)
 
-    # Create and Sector Pie plot
-    fig1 = px.pie(sector_values, values='Market_Value', names='Sector', title="Sector Breakdown")
-    fig1.update_traces(textposition='inside', textinfo='percent',
-                      hovertemplate='<b>Company</b> = %{label}<br><b>Market Value</b> = %{value:$.0f}')
+# ----------------- VISUALIZATION SECTION ----------------- #
 
-    # Display Chart
-    st.plotly_chart(fig1, use_container_width=True)
+if not todays_stocks_complete.empty:
 
-with col2:
+    # --- ROW 1: PIE CHARTS ---
+    col1, col2 = st.columns(2)
 
-    # Create and Industry Pie plot
-    fig2 = px.pie(industry_values, values='Market_Value', names='Industry', title="Industry Breakdown")
-    fig2.update_traces(textposition='inside', textinfo='percent',
-                      hovertemplate='<b>Company</b> = %{label}<br><b>Market Value</b> = %{value:$.0f}')
+    with col1:
+        st.subheader("Sector Allocation")
+        if not sector_values.empty:
+            fig1 = px.pie(
+                sector_values,
+                values='market_value',
+                names='sector',
+                hole=0.4
+            )
+            fig1.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                hovertemplate='<b>%{label}</b><br>Market Value: $%{value:,.0f}'
+            )
+            st.plotly_chart(fig1, use_container_width=True)
+        else:
+            st.info("No sector data available.")
 
-    # Display Chart
-    st.plotly_chart(fig2, use_container_width=True)
+    with col2:
+        st.subheader("Industry Allocation")
+        if not industry_values.empty:
+            # Group smaller industries into "Other" for cleaner pie chart if too many
+            if len(industry_values) > 15:
+                disp_industry = industry_values.head(14).copy()
+                other_val = industry_values.iloc[14:]["market_value"].sum()
+                # Create a DataFrame for "Other"
+                other_row = pd.DataFrame([{"industry": "Other", "market_value": other_val}])
+                disp_industry = pd.concat([disp_industry, other_row], ignore_index=True)
+            else:
+                disp_industry = industry_values
 
-### Treemap
+            fig2 = px.pie(
+                disp_industry,
+                values='market_value',
+                names='industry',
+                hole=0.4
+            )
+            fig2.update_traces(
+                textposition='inside',
+                textinfo='percent',  # Label often too long for industry
+                hovertemplate='<b>%{label}</b><br>Market Value: $%{value:,.0f}'
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        else:
+            st.info("No industry data available.")
 
-# Create display choice options
-choice = st.radio("Pick one", ["Sector", "Industry"])
+    st.markdown("---")
 
-# Create and Display Sector/Industry Treemap plot
-if choice == "Industry":
-    fig3 = px.treemap(todays_stocks_complete, path=['Industry', 'Stock'], values='Market_Value')
-    fig3.update_traces(
-        hovertemplate='<b>Company</b> = %{label}<br><b>Parent</b> = %{parent}' +
-                      '<br><b>Market Value</b> = %{value:$.0f}<br><b>Percent of Parent</b> = %{percentParent:.2%}')
-    st.plotly_chart(fig3, use_container_width=True)
+    # --- ROW 2: TREEMAP ---
+    st.subheader("Interactive Hierarchy")
+
+    # Toggle
+    view_mode = st.radio("Group By:", ["Sector -> Stock", "Industry -> Stock"], horizontal=True)
+
+    if view_mode == "Industry -> Stock":
+        path = ['industry', 'stock']
+        title = "Portfolio by Industry"
+    else:
+        path = ['sector', 'stock']
+        title = "Portfolio by Sector"
+
+    # Treemap
+    # Note: Treemaps handle NaNs poorly in path, fill them
+    todays_stocks_complete["sector"] = todays_stocks_complete["sector"].fillna("Unknown")
+    todays_stocks_complete["industry"] = todays_stocks_complete["industry"].fillna("Unknown")
+    todays_stocks_complete["stock"] = todays_stocks_complete["stock"].fillna("Unknown")
+
+    fig_tree = px.treemap(
+        todays_stocks_complete,
+        path=path,
+        values='market_value',
+        color='market_value',  # Optional: color by value or another metric like % change
+        color_continuous_scale='Blues'
+    )
+
+    fig_tree.update_traces(
+        hovertemplate='<b>%{label}</b><br>Market Value: $%{value:,.0f}<br>Share: %{percentParent:.1%}'
+    )
+    fig_tree.update_layout(margin=dict(t=20, l=0, r=0, b=0))
+
+    st.plotly_chart(fig_tree, use_container_width=True)
+
 else:
-    fig4 = px.treemap(todays_stocks_complete, path=['Sector', 'Stock'], values='Market_Value')
-    fig4.update_traces(
-        hovertemplate='<b>Company</b> = %{label}<br><b>Parent</b> = %{parent}' +
-                      '<br><b>Market Value</b> = %{value:$.0f}<br><b>Percent of Parent</b> = %{percentParent:.2%}')
-    st.plotly_chart(fig4, use_container_width=True)
-
+    st.warning("No stock data found. Please run the investment data processor.")

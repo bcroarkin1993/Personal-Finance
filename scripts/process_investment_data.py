@@ -1,500 +1,355 @@
-from datetime import date, timedelta
-from geopy import Nominatim
 import json
+import time
+import argparse
+import sys
 import numpy as np
-import os
 import pandas as pd
-import pycountry
 import yfinance as yf
+from datetime import datetime, date, timedelta
+from pathlib import Path
 
-def capSize(x):
-    if x < 2:
-        return('Small-Cap')
-    elif x < 10:
-        return('Mid-Cap')
-    else:
-        return('Large-Cap')
+# ----------------- CONFIGURATION ----------------- #
 
-def country_flag(df):
-    country = pycountry.countries.get(alpha_2=df['Country']).name
-    country = country if country else ''
-    return country
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+DATA_DIR = PROJECT_ROOT / 'data'
+
+STOCK_DICT_PATH = DATA_DIR / 'stock_dictionary.json'
+STOCKS_CSV_PATH = DATA_DIR / 'stocks.csv'
+DAILY_STOCKS_CSV_PATH = DATA_DIR / 'daily_stocks.csv'
+STOCK_INFO_CSV_PATH = DATA_DIR / 'stock_info.csv'
+
+# ----------------- HELPER FUNCTIONS ----------------- #
 
 def load_stock_dictionary(file_path):
+    if not file_path.exists():
+        raise FileNotFoundError(f"Stock dictionary not found at {file_path}")
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+def categorize_market_cap(market_cap_b):
+    if pd.isna(market_cap_b) or market_cap_b <= 0: return "Unknown"
+    if market_cap_b >= 200: return "Mega"
+    elif 10 <= market_cap_b < 200: return "Large"
+    elif 2 <= market_cap_b < 10: return "Medium"
+    elif 0.3 <= market_cap_b < 2: return "Small"
+    elif 0.05 <= market_cap_b < 0.3: return "Micro"
+    else: return "Nano"
+
+# ----------------- CORE LOGIC ----------------- #
+
+def build_summary_dataframe(stock_dictionary):
     """
-    Load stock dictionary from JSON file
-    :param file_path:
-    :return:
+    Replays transaction history to calculate current holdings (Quantity, Avg Cost).
+    Fetches LIVE price to calculate Market Value.
+    This is always a full recalc because live prices change constantly.
     """
-    with open(file_path, 'r') as stock_dictionary:
-        stock_dictionary = json.load(stock_dictionary)
-    return(stock_dictionary)
+    print("   > Building Current Holdings Snapshot...")
+    stock_data = []
 
-def create_daily_stocks_csv(stock_dictionary, daily_stocks_csv_path, refresh_type="full"):
-    """
-    Build out Stock positions over time and save CSV file.
-
-    Parameters:
-    - stock_dictionary: dict
-        A dictionary containing stock tickers and additional stock information.
-    - daily_stocks_csv_path: str
-        The file path where the daily stocks CSV will be saved.
-    - refresh_type: str
-        "full" for a complete refresh of data, "delta" for incremental refresh.
-
-    Returns:
-    - None
-    """
-    # Create a list of current stocks
-    stock_list = list(stock_dictionary.keys())
-
-    # Set today's date
-    today = date.today()
-
-    # Initialize DataFrame structure
-    daily_stocks = pd.DataFrame(columns=['Date', 'Close', 'Stock'])
-
-    # Determine refresh type
-    if refresh_type == "full" or not os.path.exists(daily_stocks_csv_path):
-        # Full refresh: Fetch data from the first buy date to today
-        first_buy_date = date(2016, 9, 21)
-        start_date = first_buy_date
-    elif refresh_type == "delta":
-        # Delta refresh: Fetch data from the last update to today
-        existing_data = pd.read_csv(daily_stocks_csv_path)
-        existing_data['Date'] = pd.to_datetime(existing_data['Date'])
-        last_update = existing_data['Date'].max().date()
-        start_date = last_update + timedelta(days=1)  # Start from the next day after the last update
-    else:
-        raise ValueError("Invalid refresh_type. Choose either 'full' or 'delta'.")
-
-    # Iterate over the stock list and fetch data
-    for stock in stock_list:
+    for ticker, details in stock_dictionary.items():
         try:
-            # Fetch data from Yahoo Finance
-            temp = yf.download(stock, start=start_date, end=today)['Adj Close']
+            # Fetch stock data
+            stock = yf.Ticker(ticker)
+            try:
+                # Try fast access first
+                current_price = stock.fast_info['last_price']
+            except:
+                # Fallback to standard info request
+                current_price = stock.info.get("currentPrice", 0)
 
-            # Convert to DataFrame
-            temp_df = pd.DataFrame(temp)
-            temp_df['Stock'] = stock
-            temp_df.reset_index(inplace=True)
-            temp_df.columns = ['Date', 'Close', 'Stock']
+            # Basic Metadata
+            stock_info_meta = stock.info
+            company_name = stock_info_meta.get("longName", details.get("stock_name", ticker))
+            high_52 = stock_info_meta.get("fiftyTwoWeekHigh", 0)
+            low_52 = stock_info_meta.get("fiftyTwoWeekLow", 0)
+            pct_change = stock_info_meta.get("52WeekChange", 0) * 100
 
-            # Append new data to the final DataFrame
-            daily_stocks = pd.concat([daily_stocks, temp_df], ignore_index=True)
+            # Replay History
+            total_quantity = 0.0
+            total_cost = 0.0
+            avg_cost = 0.0
+
+            # Combine transactions
+            txns = details.get("purchase_history", [])
+            for txn in txns:
+                qty = float(txn["quantity"])
+                price = float(txn["share_price"])
+                if txn["buy_sell"] == "buy":
+                    total_cost += qty * price
+                    total_quantity += qty
+                elif txn["buy_sell"] == "sell":
+                    if total_quantity > 0:
+                        # Reduce cost basis proportionally
+                        avg_cost_at_sale = total_cost / total_quantity
+                        total_cost -= qty * avg_cost_at_sale
+                    total_quantity -= qty
+
+            # Handle Splits (Simplified placeholder)
+            # In a real app, you'd insert split events into the timeline above
+            splits = stock.splits
+            if not splits.empty:
+                # Naive implementation: just check if split happened recently?
+                # For robust split handling, transactions need to be ordered with splits.
+                pass
+
+            # Calc Stats
+            if total_quantity > 0:
+                avg_cost = total_cost / total_quantity
+            else:
+                avg_cost = 0
+
+            market_value = total_quantity * current_price
+            equity_change = market_value - total_cost
+
+            # Only add active positions
+            if total_quantity > 0:
+                stock_data.append([
+                    ticker, company_name, current_price, total_quantity, avg_cost,
+                    market_value, pct_change, equity_change, high_52, low_52, "Stock"
+                ])
+
         except Exception as e:
-            print(f"Error fetching data for {stock}: {e}")
+            print(f"Error processing {ticker}: {e}")
 
-    # Step 2: Merge my stock quantities into this table
+    cols = ["Stock", "Company", "Price", "Quantity", "Avg_Cost", "Market_Value",
+            "Percent_Change", "Equity_Change", "52_Week_High", "52_Week_Low", "Asset_Type"]
 
-    # Add the stock quantity column
-    daily_stocks['Shares_Held'] = np.nan
-    # Add the average cost column
-    daily_stocks['Avg_Cost'] = np.nan
+    df = pd.DataFrame(stock_data, columns=cols)
 
-    # Loop over the stock purchase history dictionary and add quantity information
-    for k, v in stock_dictionary.items():
+    if not df.empty:
+        total_mv = df["Market_Value"].sum()
+        df["Portfolio_Diversity"] = round(df["Market_Value"] * 100 / total_mv, 2) if total_mv > 0 else 0
+        df["Direction"] = np.where(df["Percent_Change"] > 0, 'Up', 'Down')
 
-        # Just need to find the initial purchase date and forward fill if only bought once
-        if len(v['purchase_history']) == 1:
-            # Find the initial_purchase_date
-            initial_purchase_date = v['purchase_history'][0]['date']
-            # Find the intial purchase quantity
-            initial_purchase_quantity = v['purchase_history'][0]['quantity']
-            # Find the initial purchase cost
-            initial_purchase_cost = v['purchase_history'][0]['share_price']
-            # Modify the Shares_Held value at the initial_purchase_date
-            daily_stocks.loc[(daily_stocks.Date == initial_purchase_date) &
-                    (daily_stocks.Stock == k), 'Shares_Held'] = initial_purchase_quantity
-            # Modify the Avg_Cost value at the initial_purchase_date
-            daily_stocks.loc[(daily_stocks.Date == initial_purchase_date) &
-                    (daily_stocks.Stock == k), 'Avg_Cost'] = initial_purchase_cost
+        # Rounding
+        for c in ["Price", "Quantity", "Avg_Cost", "Market_Value", "Equity_Change", "52_Week_High", "52_Week_Low"]:
+            df[c] = df[c].round(2)
 
-        # Need to do more modifications if multiple buy/sell events
-        else:
-            # iterate over the different purchase events
-            for num, purchase in enumerate(v['purchase_history']):
-                if num == 0:
-                    # Find the initial_purchase_date
-                    initial_purchase_date = v['purchase_history'][0]['date']
-                    # Find the intial purchase quantity
-                    initial_purchase_quantity = v['purchase_history'][0]['quantity']
-                    # Find the initial purchase cost
-                    initial_purchase_cost = v['purchase_history'][0]['share_price']
-                    # Find the initial equity
-                    initial_equity = initial_purchase_cost * initial_purchase_quantity
-                    # Modify the value at the initial_purchase date
-                    daily_stocks.loc[(daily_stocks.Date == initial_purchase_date) &
-                            (daily_stocks.Stock == k), 'Shares_Held'] = initial_purchase_quantity
-                    # Modify the Avg_Cost value at the initial_purchase_date
-                    daily_stocks.loc[(daily_stocks.Date == initial_purchase_date) &
-                            (daily_stocks.Stock == k), 'Avg_Cost'] = initial_purchase_cost
-                elif num == 1:
-                    # List the current quantity
-                    previous_quantity = initial_purchase_quantity
-                    # List the current equity
-                    previous_equity = initial_equity
-                    # Find the purchase_date
-                    purchase_date = purchase['date']
-                    # Find the purchase quantity
-                    purchase_quantity = purchase['quantity'] if purchase['buy_sell'] == 'buy' else -purchase['quantity']
-                    # Find the purchase cost
-                    purchase_cost = v['purchase_history'][num]['share_price']
-                    # Find the equity of the purchase
-                    purchase_equity = purchase_cost * purchase_quantity
-                    # Update my quantity
-                    updated_quantity = previous_quantity + purchase_quantity
-                    # Update my total equity
-                    updated_equity = (initial_equity + purchase_equity) if updated_quantity != 0 else 0
-                    # Update my Avg_Cost
-                    try:
-                        updated_avg_cost = updated_equity / updated_quantity
-                    except ZeroDivisionError:
-                        updated_avg_cost = 0
-                    # Modify the Shares_Held value at the purchase date
-                    daily_stocks.loc[(daily_stocks.Date == purchase_date) &
-                            (daily_stocks.Stock == k), 'Shares_Held'] = updated_quantity
-                    # Modify the Avg_Cost value
-                    daily_stocks.loc[(daily_stocks.Date == purchase_date) &
-                            (daily_stocks.Stock == k), 'Avg_Cost'] = updated_avg_cost
-                else:
-                    # List the current quantity
-                    previous_quantity = updated_quantity
-                    # List the current equity
-                    previous_equity = updated_equity
-                    # Find the purchase_date
-                    purchase_date = purchase['date']
-                    # Find the purchase quantity
-                    purchase_quantity = purchase['quantity'] if purchase['buy_sell'] == 'buy' else -purchase['quantity']
-                    # Find the purchase cost
-                    purchase_cost = v['purchase_history'][num]['share_price']
-                    # Find the equity of the purchase
-                    purchase_equity = purchase_cost * purchase_quantity
-                    # Update my quantity
-                    updated_quantity = previous_quantity + purchase_quantity
-                    # Update my total equity
-                    updated_equity = (previous_equity + purchase_equity) if updated_quantity != 0 else 0
-                    # Update my Avg_Cost
-                    try:
-                        updated_avg_cost = updated_equity / updated_quantity
-                    except ZeroDivisionError:
-                        updated_avg_cost = 0
-                    # Modify the Shares_Held value at the purchase date
-                    daily_stocks.loc[(daily_stocks.Date == purchase_date) &
-                            (daily_stocks.Stock == k), 'Shares_Held'] = updated_quantity
-                    # Modify the Avg_Cost value
-                    daily_stocks.loc[(daily_stocks.Date == purchase_date) &
-                            (daily_stocks.Stock == k), 'Avg_Cost'] = updated_avg_cost
+        return df.sort_values(by="Market_Value", ascending=False)
 
-    # Step 3: Need to connect my quantities across dates now
+    return pd.DataFrame(columns=cols)
 
-    # Iterate over the stock list and forward fill values
-    temp_list = []  # Use a list to collect DataFrames
-    for stock in stock_list:
-        temp = daily_stocks.loc[daily_stocks.Stock == stock].ffill()
-        temp_list.append(temp)  # Add each temporary DataFrame to the list
 
-    # Concatenate all the temporary DataFrames into a single DataFrame
-    daily_stocks_df = pd.concat(temp_list, ignore_index=True)
+def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
+    """
+    Updates historical timeline incrementally.
+    """
+    print(f"   > Updating Historical Daily Data (Mode: {'FULL' if full_refresh else 'INCREMENTAL'})...")
 
-    # Convert Shares_Held to an integer
-    daily_stocks_df['Shares_Held'] = daily_stocks_df['Shares_Held'].dropna().astype(float)
+    existing_df = pd.DataFrame()
+    start_date = "2016-01-01" # Default start for full refresh
 
-    # Add in Equity column
-    daily_stocks_df['Equity'] = daily_stocks_df['Shares_Held'] * daily_stocks_df['Avg_Cost']
-    # Add a Market Value column
-    daily_stocks_df['Market_Value'] = daily_stocks_df['Close'] * daily_stocks_df['Shares_Held']
-    # Add in Total Profit column
-    daily_stocks_df['Total_Profit'] = daily_stocks_df['Market_Value'] - daily_stocks_df['Equity']
-    # Add in Daily Profit column
-    daily_stocks_df['Daily_Profit'] = daily_stocks_df.groupby('Stock')['Total_Profit'].diff()
-    # Add a Per Share Profit column
-    daily_stocks_df['Per_Share_Profit'] = daily_stocks_df['Close'] - daily_stocks_df['Avg_Cost']
-    # Add in Daily Pct Profit column
-    daily_stocks_df['Daily_Pct_Profit'] = daily_stocks_df.groupby('Stock')['Close'].pct_change(1)
-    daily_stocks_df['Daily_Pct_Profit'] = round(daily_stocks_df['Daily_Pct_Profit'] * 100, 2)
-    # Add Datetime column
-    daily_stocks_df['Datetime'] = pd.to_datetime(daily_stocks_df['Date'])
-    # Remove unnamed columns
-    daily_stocks_df = daily_stocks_df.loc[:, ~daily_stocks_df.columns.str.contains('^Unnamed')]
+    # 1. Load Existing Data
+    if not full_refresh and csv_path.exists():
+        try:
+            existing_df = pd.read_csv(csv_path)
+            if not existing_df.empty and "Date" in existing_df.columns:
+                existing_df["Date"] = pd.to_datetime(existing_df["Date"])
+                last_date = existing_df["Date"].max()
+                # Start fetching from the last date (overlaps 1 day to ensure close price update)
+                start_date = last_date.strftime("%Y-%m-%d")
+                print(f"     Found existing data. Fetching new data from {start_date}...")
+        except Exception as e:
+            print(f"     Error reading existing history ({e}). Switching to full refresh.")
+            existing_df = pd.DataFrame()
 
-    # Re-format daily_stocks date column
-    daily_stocks_df['Date'] = daily_stocks_df['Date'].dt.strftime('%Y-%m-%d')
+    new_rows = []
 
-    # Replace all np.nan values with 0
-    daily_stocks_df.fillna(0, inplace = True)
+    for ticker, details in stock_dictionary.items():
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(start=start_date)
 
-    # Save the updated data
-    if refresh_type == "delta" and os.path.exists(daily_stocks_csv_path):
-        # Merge new data with existing data
-        existing_data = pd.read_csv(daily_stocks_csv_path)
-        updated_data = pd.concat([existing_data, daily_stocks_df], ignore_index=True)
-        updated_data.drop_duplicates(subset=['Date', 'Stock'], inplace=True)
-        updated_data.to_csv(daily_stocks_csv_path, index=False)
+            if hist.empty:
+                continue
+
+            hist.reset_index(inplace=True)
+            hist["Date"] = hist["Date"].dt.tz_localize(None)
+
+            # Transaction Replay Logic
+            txns = []
+            for t in details["purchase_history"]:
+                d_str = t["date"]
+                try:
+                    d = pd.to_datetime(d_str).tz_localize(None)
+                except:
+                    d = pd.to_datetime(d_str, format="%m/%d/%Y").tz_localize(None)
+                txns.append({'date': d, 'qty': float(t['quantity']), 'price': float(t['share_price']), 'type': t['buy_sell']})
+            txns.sort(key=lambda x: x['date'])
+
+            current_qty = 0.0
+            current_cost_basis = 0.0
+            txn_idx = 0
+
+            stock_rows = []
+
+            for _, row in hist.iterrows():
+                market_date = row["Date"]
+                close_price = row["Close"]
+
+                # Apply transactions up to this date
+                while txn_idx < len(txns) and txns[txn_idx]['date'] <= market_date:
+                    t = txns[txn_idx]
+                    if t['type'] == 'buy':
+                        current_cost_basis += (t['qty'] * t['price'])
+                        current_qty += t['qty']
+                    elif t['type'] == 'sell':
+                        if current_qty > 0:
+                            avg = current_cost_basis / current_qty
+                            current_cost_basis -= (t['qty'] * avg)
+                        current_qty -= t['qty']
+                    txn_idx += 1
+
+                # Only record if we hold the stock
+                if current_qty > 0.001:
+                    avg_cost = current_cost_basis / current_qty
+                    market_val = current_qty * close_price
+
+                    stock_rows.append({
+                        "Date": market_date,
+                        "Close": close_price,
+                        "Stock": ticker,
+                        "Shares_Held": current_qty,
+                        "Avg_Cost": avg_cost,
+                        "Equity": current_cost_basis,
+                        "Market_Value": market_val,
+                        "Total_Profit": market_val - current_cost_basis
+                    })
+
+            new_rows.extend(stock_rows)
+
+        except Exception as e:
+            print(f"Error processing history for {ticker}: {e}")
+
+    new_df = pd.DataFrame(new_rows)
+
+    # Merge Logic
+    if not existing_df.empty:
+        if new_df.empty:
+            return existing_df # No new data, return old data unchanged
+
+        # Combine
+        combined = pd.concat([existing_df, new_df], ignore_index=True)
+        # Deduplicate (Update overlap days with latest data)
+        combined = combined.drop_duplicates(subset=["Date", "Stock"], keep="last")
+        combined = combined.sort_values(by=["Stock", "Date"])
+
+        # Recalculate Daily Changes on the full dataset
+        combined["Daily_Profit"] = combined.groupby("Stock")["Total_Profit"].diff().fillna(0)
+        combined["Daily_Pct_Profit"] = combined.groupby("Stock")["Close"].pct_change().fillna(0) * 100
+        return combined
+
     else:
-        # Save the full refreshed data
-        daily_stocks_df.to_csv(daily_stocks_csv_path, index=False)
+        # If this was a full refresh
+        if not new_df.empty:
+            new_df = new_df.sort_values(by=["Stock", "Date"])
+            new_df["Daily_Profit"] = new_df.groupby("Stock")["Total_Profit"].diff().fillna(0)
+            new_df["Daily_Pct_Profit"] = new_df.groupby("Stock")["Close"].pct_change().fillna(0) * 100
+        return new_df
 
-def create_stocks_csv(stock_dictionary, stocks_csv_path):
+
+def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
     """
-    # ## Create a summary table that describes my positions today
-
-    # What information do I want in this table?
-    # - Company Name
-    # - Stock Ticker
-    # - Price
-    # - Shares Owned
-    # - Average Cost
-    # - Total Equity
-    # - Profit ($'s)
-    # - Profit (%)
-    # - Portfolio Diversity
-    :return:
+    Updates fundamentals. If incremental, only fetches data for owned stocks
+    to save time, or preserves existing data if fetch fails.
     """
-    # Create a list of my current stocks
-    stock_list = list(stock_dictionary.keys())
+    print("   > Updating Fundamentals...")
 
-    # Get the table of my account holdings from RobinHood
-    temp = r.account.build_holdings(with_dividends = False)
-
-    # Convert this table into a dataframe
-    stocks_df = pd.DataFrame(temp)
-
-    # Transpose table
-    stocks_df = stocks_df.T
-
-    # Subset to only the needed columns
-    stocks_df = stocks_df[['price', 'quantity', 'average_buy_price', 'equity',
-                       'percent_change', 'equity_change', 'name']]
-
-    # Update Column Names
-    stocks_df.columns = ['Price', 'Quantity', 'Avg_Cost', 'Market_Value', 'Percent_Change', 'Equity_Change', 'Company']
-
-    # Round columns and change data types as appropriate
-    stocks_df['Price'] = round(stocks_df['Price'].astype(float), 2)
-    stocks_df['Quantity'] = stocks_df['Quantity'].astype(float)  # convert to float first to avoid error
-    stocks_df['Quantity'] = stocks_df['Quantity'].astype(int)
-    stocks_df['Market_Value'] = stocks_df['Market_Value'].astype(float)
-    stocks_df['Avg_Cost'] = round(stocks_df['Avg_Cost'].astype(float), 2)
-    stocks_df['Equity_Change'] = round(stocks_df['Equity_Change'].astype(float), 2)
-    stocks_df['Percent_Change'] = stocks_df['Percent_Change'].astype(float)
-
-    # Create new columns for 52 Week High and Low
-    stocks_df['52_Week_High'] = 0.0
-    stocks_df['52_Week_Low'] = 0.0
-
-    # Add in column with stock/crypto identifier
-    stocks_df['Asset_Type'] = 'Stock'
-
-    # Iterate over stock list and append 52-Week High and Low to dataframe
-    for stock in stock_list:
-        # Pull the fundamentals table
-        fundamentals = r.stocks.get_fundamentals(stock)[0]
-        # Access the 52-Week High and Low and make them into variables, if they exist
+    existing_df = pd.DataFrame()
+    if not full_refresh and csv_path.exists():
         try:
-            high52 = fundamentals['high_52_weeks']
-            low52 = fundamentals['low_52_weeks']
-            # modify the value
-            stocks_df.loc[stock, '52_Week_High'] = float(high52)
-            stocks_df.loc[stock, '52_Week_Low'] = float(low52)
-        except TypeError:
-            # modify the value
-            stocks_df.loc[stock, '52_Week_High'] = np.nan
-            stocks_df.loc[stock, '52_Week_Low'] = np.nan
-
-    # Modify the datatypes
-    stocks_df['52_Week_High'] = stocks_df['52_Week_High'].astype(float)
-    stocks_df['52_Week_Low'] = stocks_df['52_Week_Low'].astype(float)
-
-    # Round
-    stocks_df['52_Week_High'] = round(stocks_df['52_Week_High'], 2)
-    stocks_df['52_Week_Low'] = round(stocks_df['52_Week_Low'], 2)
-
-    # Add in a column for portfolio diversity to stocks
-    stocks_df['Portfolio_Diversity'] = round(stocks_df['Market_Value'] * 100 / sum(stocks_df['Market_Value']), 2)
-    # Add in column for the direction of the stock movement
-    stocks_df['Direction'] = np.where(stocks_df['Percent_Change'] > 0, 'Up', 'Down')
-
-    # Reorganize columns
-    cols = ['Company', 'Price', 'Quantity', 'Avg_Cost', 'Market_Value', 'Percent_Change', 'Equity_Change',
-            '52_Week_High','52_Week_Low', 'Asset_Type']
-    stocks_df = stocks_df[cols]
-
-    # Reset index
-    stocks_df.reset_index(inplace = True)
-    # Rename column
-    stocks_df.rename(columns={'index': 'Stock'}, inplace=True)
-    # Replace all np.nan values with 0
-    stocks_df.fillna(0, inplace=True)
-
-    # Save the data file
-    stocks_df.to_csv(stocks_csv_path)
-
-def create_stock_info_csv(stock_dictionary, stock_info_csv_path):
-    """
-    ## Create CSV file with information about each company I own stock of
-    # - Company
-    # - CEO
-    # - Current Market Cap
-    # - Average Volume
-    # - 52 week high
-    # - 52 week low
-    # - Price-to-earnings (PE) Ratio
-    # - Price-to-book (PB) Ratio
-    # - Dividend Yield
-    # - Beta risk (Yahoo continues to give me HTTP errors, so may need to find alternative route to get this)
-    # - Sector
-    # - Industry
-    # - Buy/Sell/Hold ratings
-    # - Description
-    :return:
-    """
-    # Create the final dataframe structure
-    stock_info_df = pd.DataFrame(columns = ['Company', 'CEO', 'Country', 'State', 'City', 'Lat', 'Lng',
-                                            'Market_Cap (Billions)', 'Avg_Volume (Millions)', 'Shares_Outstanding',
-                                            'PE_Ratio', 'PB_Ratio', 'Dividend_Yield', 'Beta', 'Sector', 'Industry',
-                                            'Buy_Ratio', 'Hold_Ratio', 'Sell_Ratio', 'Description'])
-
-    # Initiate geocoder
-    geolocator = Nominatim(user_agent="brcroarkin@gmail.com")
-
-    # Create a list of my current stocks
-    stock_list = list(stock_dictionary.keys())
-
-    # Loop over the companies in the stock list, get the needed information, and append df
-    for stock in stock_list:
-        print(stock)
-        company = stock
-        # Get information on company's fundamentals from Robinhood, if they exist
-        try:
-            fundamentals = r.stocks.get_fundamentals(stock)[0]
-            ceo = fundamentals['ceo']
-            state = fundamentals['headquarters_state']
-            city = fundamentals['headquarters_city']
-            full_location = f"{city}, {state}"
-            market_cap = fundamentals['market_cap']
-            average_volume = fundamentals['average_volume']
-            shares_outstanding = fundamentals['shares_outstanding']
-            pe_ratio = fundamentals['pe_ratio']
-            pb_ratio = fundamentals['pb_ratio']
-            dividend_yield = fundamentals['dividend_yield']
-            sector = fundamentals['sector']
-            industry = fundamentals['industry']
-            description = fundamentals['description']
-        except TypeError:
-            ceo = np.nan
-            state = np.nan
-            city = np.nan
-            market_cap = np.nan
-            average_volume = np.nan
-            shares_outstanding = np.nan
-            pe_ratio = np.nan
-            pb_ratio = np.nan
-            dividend_yield = np.nan
-            sector = np.nan
-            industry = np.nan
-            description = np.nan
-        # Get information on the company's geography (lat/long) from Robinhood and enhance with Geocoding, if exists
-        try:
-            country = r.stocks.find_instrument_data(stock)[0]['country']
-            location = geolocator.geocode(full_location, timeout=20)
-            latitude = location.latitude
-            longitude = location.longitude
+            existing_df = pd.read_csv(csv_path)
         except:
-            location = np.nan
-            latitude = np.nan
-            longitude = np.nan
-        # Get information on the company's beta from Yahoo, if it exists
+            pass
+
+    # Simple strategy: Refresh all tickers in dictionary (Owned + Watchlist)
+    tickers_to_fetch = list(stock_dict.keys())
+
+    data_list = []
+
+    for ticker in tickers_to_fetch:
         try:
-            beta = yf.Ticker(stock).info['beta']
-        except:
-            beta = np.nan
-        # Get information from Robinhood on Buy/Hold/Sell ratings, if they exist
-        try:
-            ratings = r.stocks.get_ratings(stock, info=None)['summary']
-            total_ratings = sum(ratings.values()) if ratings != None else np.nan
-            buy_ratio = ratings['num_buy_ratings'] / total_ratings if ratings != None else np.nan
-            hold_ratio = ratings['num_hold_ratings'] / total_ratings if ratings != None else np.nan
-            sell_ratio = ratings['num_sell_ratings'] / total_ratings if ratings != None else np.nan
-        except TypeError:
-            buy_ratio = np.nan
-            hold_ratio = np.nan
-            sell_ratio = np.nan
-        # Format values as a list/series to be added to the final df
-        data_list = [company, ceo, country, state, city, latitude, longitude, market_cap, average_volume,
-                     shares_outstanding, pe_ratio, pb_ratio, dividend_yield, beta, sector, industry, buy_ratio,
-                     hold_ratio, sell_ratio, description]
-        # Add the row directly
-        stock_info_df.loc[len(stock_info_df)] = data_list
+            time.sleep(0.1) # Be nice to API
+            stock = yf.Ticker(ticker)
+            info = stock.info
 
-    # Convert country code to country name
-    stock_info_df['Country'] = stock_info_df.apply(country_flag, axis=1)
+            def get(key, default=0): return info.get(key, default)
 
-    # Update data types
-    stock_info_df['Market_Cap (Billions)'] = stock_info_df['Market_Cap (Billions)'].astype(float)
-    stock_info_df['Avg_Volume (Millions)'] = stock_info_df['Avg_Volume (Millions)'].astype(float)
-    stock_info_df['Beta'] = stock_info_df['Beta'].astype(float)
-    stock_info_df['PE_Ratio'] = stock_info_df['PE_Ratio'].astype(float)
-    stock_info_df['PB_Ratio'] = stock_info_df['PB_Ratio'].astype(float)
-    stock_info_df['Buy_Ratio'] = stock_info_df['Buy_Ratio'].astype(float)
-    stock_info_df['Hold_Ratio'] = stock_info_df['Hold_Ratio'].astype(float)
-    stock_info_df['Sell_Ratio'] = stock_info_df['Sell_Ratio'].astype(float)
+            row = {
+                "Stock": ticker,
+                "Company": get("longName", ticker),
+                "CEO": get("companyOfficers", [{}])[0].get("name", "N/A") if get("companyOfficers") else "N/A",
+                "Country": get("country", "N/A"),
+                "State": get("state", "N/A"),
+                "City": get("city", "N/A"),
+                "Sector": get("sector", "N/A"),
+                "Industry": get("industry", "N/A"),
+                "Market Cap (B)": get("marketCap", 0) / 1e9,
+                "PE Ratio": get("trailingPE", 0),
+                "PB Ratio": get("priceToBook", 0),
+                "Beta": get("beta", 0),
+                "Dividend Yield": get("dividendYield", 0),
+                "Target Mean Price": get("targetMeanPrice", 0),
+                "Description": get("longBusinessSummary", "N/A"),
+                "Last Updated": date.today()
+            }
 
-    # Update format
-    stock_info_df['Market_Cap (Billions)'] = round(stock_info_df['Market_Cap (Billions)'] / 1000000000, 1)
-    stock_info_df['Avg_Volume (Millions)'] = round(stock_info_df['Avg_Volume (Millions)'] / 1000000, 1)
-    stock_info_df['Beta'] = round(stock_info_df['Beta'],2)
-    stock_info_df['Shares_Outstanding'] = round(stock_info_df['Shares_Outstanding'].astype(float),2)
-    stock_info_df['PE_Ratio'] = round(stock_info_df['PE_Ratio'], 2)
-    stock_info_df['PB_Ratio'] = round(stock_info_df['PB_Ratio'], 2)
-    stock_info_df['Buy_Ratio'] = round(stock_info_df['Buy_Ratio'], 2)
-    stock_info_df['Hold_Ratio'] = round(stock_info_df['Hold_Ratio'], 2)
-    stock_info_df['Sell_Ratio'] = round(stock_info_df['Sell_Ratio'], 2)
+            # Risk scores (often missing in standard yfinance, add defaults)
+            row.update({
+                "Audit Risk": get("auditRisk", 5),
+                "Board Risk": get("boardRisk", 5),
+                "Compensation Risk": get("compensationRisk", 5),
+                "Shareholder Rights Risk": get("shareHolderRightsRisk", 5),
+                "Overall Risk": get("overallRisk", 5)
+            })
 
-    # Add in cap_size to stock_info (<$2B is small-cap, <$10B is mid-cap, >$10B is large-cap)
-    stock_info_df['CapSize'] = stock_info_df['Market_Cap (Billions)'].apply(capSize)
+            data_list.append(row)
 
-    # Rename columns
-    stock_info_df.rename(columns={'Market_Cap (Billions)':'Market_Cap',
-                                  'Avg_Volume (Millions)': 'Avg_Volume'}, inplace=True)
+        except Exception as e:
+            print(f"Failed to fetch info for {ticker}: {e}")
+            # If fetch failed, try to recover data from existing file
+            if not existing_df.empty and ticker in existing_df["Stock"].values:
+                old_row = existing_df[existing_df["Stock"] == ticker].iloc[0].to_dict()
+                data_list.append(old_row)
 
-    # Save the data file
-    stock_info_df.to_csv(stock_info_csv_path)
+    return pd.DataFrame(data_list)
 
-if __name__ == '__main__':
-    # Resolve paths relative to the current script's directory
-    scripts_dir = os.path.dirname(os.path.abspath(__file__))
-    app_dir = os.path.dirname(scripts_dir)
-    config_file = os.path.join(app_dir, 'config', 'config.ini')  # Adjust folder name if needed
-    stock_dictionary_file = os.path.join(app_dir, 'data', 'stock_dictionary.json')
+# ----------------- MAIN ----------------- #
 
-    # Output file paths
-    stocks_csv_path = os.path.join(app_dir, 'data', 'stocks.csv')
-    stock_info_csv_path = os.path.join(app_dir, 'data', 'stock_info.csv')
-    daily_stocks_csv_path = os.path.join(app_dir, 'data', 'daily_stocks.csv')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--full', action='store_true', help="Force full refresh")
+    args = parser.parse_args()
 
-    print("BEGINNING INVESTMENT DATA PROCESSING")
+    print("--- INVESTMENT DATA UPDATE STARTED ---")
 
-    # Step 1: Load credentials
-    username, email, password = load_robinhood_credentials(config_file)
-    print(f"Username: {username}")
-    print(f"Email: {email}")
-    print(f"\nRobinhood credentials have been loaded for username ({username})")
+    if not STOCK_DICT_PATH.exists():
+        print("CRITICAL: stock_dictionary.json missing.")
+        sys.exit(1)
 
-    # Step 2: Login to Robinhood
-    login_to_robinhood(username, password)
-    print("\nSuccessfully logged into Robinhood.")
+    stock_dict = load_stock_dictionary(STOCK_DICT_PATH)
 
-    # Step 3: Load stock dictionary
-    stock_dictionary = load_stock_dictionary(stock_dictionary_file)
-    print("\nPersonal stock dictionary has been loaded\n")
+    # 1. Stocks (Snapshot)
+    stocks_df = build_summary_dataframe(stock_dict)
+    if not stocks_df.empty:
+        stocks_df.to_csv(STOCKS_CSV_PATH, index=False)
+        print(f"   > Saved stocks.csv ({len(stocks_df)} rows)")
+    else:
+        print("   > Warning: stocks.csv empty. Skipping save to preserve data.")
 
-    # Step 4: Call the portfolio analysis functions
-    create_stocks_csv(stock_dictionary, stocks_csv_path)
-    print("\nStock summary file has been created and saved to data/stocks.csv\n")
-    create_stock_info_csv(stock_dictionary, stock_info_csv_path)
-    print("\nStock info file has been created and saved to data/stock_info.csv\n")
-    create_daily_stocks_csv(stock_dictionary, daily_stocks_csv_path)
-    print("\nDaily stock file has been created and saved to data/daily_stocks.csv\n")
+    # 2. Daily History (Incremental)
+    daily_df = create_daily_stock_table(stock_dict, DAILY_STOCKS_CSV_PATH, args.full)
+    if not daily_df.empty:
+        daily_df.to_csv(DAILY_STOCKS_CSV_PATH, index=False)
+        print(f"   > Saved daily_stocks.csv ({len(daily_df)} rows)")
+    else:
+        print("   > Warning: daily_stocks.csv result empty. Skipping save.")
 
-    print("PORTFOLIO ANALYSIS COMPLETED")
+    # 3. Info (Fundamentals)
+    info_df = create_stock_info_table(stock_dict, STOCK_INFO_CSV_PATH, args.full)
+    if not info_df.empty:
+        info_df.to_csv(STOCK_INFO_CSV_PATH, index=False)
+        print(f"   > Saved stock_info.csv ({len(info_df)} rows)")
+
+    print("--- UPDATE COMPLETE ---")

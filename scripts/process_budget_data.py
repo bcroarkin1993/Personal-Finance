@@ -13,14 +13,13 @@ PROJECT_ROOT = CURRENT_DIR.parent
 DATA_DIR = PROJECT_ROOT / 'data'
 
 # Input File Path
-# Note: kept your specific local path, but wrapped in Path for consistency.
-# If you want to move the Excel into the repo, change this to: DATA_DIR / 'Budget.xlsx'
 HOME_DIR = Path.home()
 BUDGET_FILE = HOME_DIR / "Documents" / "Personal-Finance" / "Budget" / "Budget.xlsx"
 
 # Output File Paths
 INCOME_CSV = DATA_DIR / 'income.csv'
 EXPENSES_CSV = DATA_DIR / 'expenses.csv'
+MONTHLY_BUDGET_CSV = DATA_DIR / 'monthly_budget.csv'
 
 
 # ----------------- HELPER FUNCTIONS ----------------- #
@@ -51,9 +50,10 @@ def get_cutoff_date(csv_path):
         return None
 
 
-def process_budget_excel(budget_file, income_csv_path, expenses_csv_path, full_refresh=False):
+def process_budget_excel(budget_file, income_csv_path, expenses_csv_path, monthly_budget_csv_path, full_refresh=False):
     """
     Parses the Budget Excel file incrementally or fully.
+    Now also scrapes the 'Budget v Actual' sheet for budget targets.
     """
     print(f"Processing Budget Data (Mode: {'FULL' if full_refresh else 'INCREMENTAL'})...")
 
@@ -113,13 +113,13 @@ def process_budget_excel(budget_file, income_csv_path, expenses_csv_path, full_r
         print(f"Error reading Excel file: {e}")
         return
 
+    # --- PART A: TRANSACTION LOGS ---
     new_expenses_list = []
     new_income_list = []
 
     for sheet_name, _ in budget_xlsx.items():
         # Only process sheets containing "Monthly Budget"
         if 'Monthly Budget' in sheet_name:
-            # print(f"     Scanning sheet: {sheet_name}") # Optional: verify sheets being scanned
 
             # --- PROCESS EXPENSES ---
             try:
@@ -179,7 +179,47 @@ def process_budget_excel(budget_file, income_csv_path, expenses_csv_path, full_r
                 if not income.empty:
                     new_income_list.append(income)
 
-    # 4. Merge & Deduplicate
+    # --- PART B: BUDGET TARGETS (Budget v Actual) ---
+    print("   > Processing Budget Targets (Budget v Actual)...")
+    if 'Budget v Actual' in budget_xlsx:
+        try:
+            # Read Columns A:K (Date, Rent... Disposable)
+            # Header is in row 2 (index 1), so skiprows=1
+            budget_targets = pd.read_excel(
+                budget_file,
+                engine='openpyxl',
+                sheet_name='Budget v Actual',
+                header=1,  # Row 2 is header
+                usecols="A:K"
+            )
+
+            # Rename for consistency
+            budget_targets.rename(columns=lambda x: x.strip() if isinstance(x, str) else x, inplace=True)
+
+            # Ensure Date is parsed
+            if 'Date' in budget_targets.columns:
+                budget_targets['Date'] = pd.to_datetime(budget_targets['Date'], errors='coerce')
+                budget_targets = budget_targets.dropna(subset=['Date'])
+
+                # Melt into Long Format: [Date, Category, Budget_Amount]
+                # This makes plotting easier (Category as color)
+                budget_long = budget_targets.melt(
+                    id_vars=['Date'],
+                    var_name='Category',
+                    value_name='Budget_Amount'
+                )
+
+                # Save
+                budget_long.to_csv(monthly_budget_csv_path, index=False)
+                print(f"   > Saved {len(budget_long)} budget target records to {monthly_budget_csv_path}")
+            else:
+                print("   > Warning: 'Date' column not found in 'Budget v Actual' sheet.")
+        except Exception as e:
+            print(f"   > Error processing Budget v Actual sheet: {e}")
+    else:
+        print("   > Warning: 'Budget v Actual' sheet not found.")
+
+    # 4. Merge & Deduplicate Transactions
     new_expenses_df = pd.concat(new_expenses_list, ignore_index=True) if new_expenses_list else pd.DataFrame()
     new_income_df = pd.concat(new_income_list, ignore_index=True) if new_income_list else pd.DataFrame()
 
@@ -199,7 +239,7 @@ def process_budget_excel(budget_file, income_csv_path, expenses_csv_path, full_r
     final_expenses.to_csv(expenses_csv_path, index=False)
     final_income.to_csv(income_csv_path, index=False)
 
-    print(f"Done. Saved to {expenses_csv_path} and {income_csv_path}.")
+    print(f"Done. Saved transaction data to {expenses_csv_path} and {income_csv_path}.")
 
 
 if __name__ == '__main__':
@@ -208,4 +248,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("BEGINNING BUDGET DATA PROCESSING")
-    process_budget_excel(BUDGET_FILE, INCOME_CSV, EXPENSES_CSV, full_refresh=args.full)
+    process_budget_excel(BUDGET_FILE, INCOME_CSV, EXPENSES_CSV, MONTHLY_BUDGET_CSV, full_refresh=args.full)
