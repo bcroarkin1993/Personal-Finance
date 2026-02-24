@@ -64,6 +64,29 @@ def _replay_transactions(details):
     return total_quantity, total_cost
 
 
+def _safe_ticker_info(ticker: str, retries: int = 2) -> dict:
+    """
+    Fetch yf.Ticker(ticker).info with retries on JSONDecodeError / empty-body errors.
+    Yahoo Finance sometimes returns an empty response (line 1 column 1); a short
+    back-off and retry recovers most of the time.
+    Returns {} on total failure so callers can fall back gracefully.
+    """
+    for attempt in range(retries + 1):
+        try:
+            return yf.Ticker(ticker).info
+        except Exception as e:
+            is_decode = isinstance(e, (ValueError, json.JSONDecodeError)) or "json" in str(e).lower()
+            if is_decode and attempt < retries:
+                wait = API_DELAY * (2 ** (attempt + 1))
+                print(f"     [{ticker}] JSON decode error — retrying in {wait:.1f}s "
+                      f"(attempt {attempt + 1}/{retries})...")
+                time.sleep(wait)
+            else:
+                print(f"     [{ticker}] info fetch failed: {e}")
+                return {}
+    return {}
+
+
 def _batch_fetch_prices(tickers):
     """
     Fetch latest close prices for a list of tickers in a single yf.download() call.
@@ -148,7 +171,7 @@ def build_summary_dataframe(stock_dictionary):
                 try:
                     current_price = stock.fast_info.get("last_price", 0) or 0
                 except Exception:
-                    current_price = stock.info.get("currentPrice", 0) or 0
+                    current_price = _safe_ticker_info(ticker).get("currentPrice", 0) or 0
 
             # Use fast_info for 52wk data (lightweight, avoids quoteSummary endpoint)
             try:
@@ -160,7 +183,7 @@ def build_summary_dataframe(stock_dictionary):
 
             # pct_change needs full info — grab only what's needed
             try:
-                full_info = stock.info
+                full_info = _safe_ticker_info(ticker)
                 company_name = full_info.get("longName", company_name)
                 pct_change = (full_info.get("52WeekChange", 0) or 0) * 100
             except Exception:
@@ -331,8 +354,9 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
     for ticker in tickers_to_fetch:
         try:
             time.sleep(API_DELAY)
-            stock = yf.Ticker(ticker)
-            info = stock.info
+            info = _safe_ticker_info(ticker)
+            if not info:
+                raise ValueError(f"Empty info returned for {ticker} after retries")
 
             def get(key, default=0):
                 return info.get(key, default)

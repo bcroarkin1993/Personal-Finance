@@ -85,24 +85,49 @@ def run_subprocess_refresh(
 
     with st.spinner(spinner_msg):
         try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as e:
-            st.error(f"Refresh script failed (exit code {e.returncode}).")
-            return
+            result = subprocess.run(cmd, capture_output=True, text=True)
         except Exception as e:
             st.error(f"Refresh failed: {e}")
             return
 
+    script_output = (result.stdout or "") + (result.stderr or "")
+
+    # Non-zero exit code = hard crash in the script
+    if result.returncode != 0:
+        st.error(f"Refresh script failed (exit code {result.returncode}).")
+        if script_output.strip():
+            with st.expander("Script output (click to expand)"):
+                st.code(script_output[-3000:])
+        return
+
     clear_cache_fn()
     mtime_after = _latest_csv_mtime()
 
+    # Even with exit code 0, yfinance can print "X Failed Downloads" or
+    # JSONDecodeError to stdout without raising — detect those here.
+    warning_lines = [
+        line for line in script_output.splitlines()
+        if any(kw in line.lower() for kw in ("failed", "error", "exception", "traceback"))
+    ]
+
     if mtime_after > mtime_before:
-        st.success("Data updated successfully!")
+        if warning_lines:
+            st.warning(
+                f"Data saved, but {len(warning_lines)} warning(s) were detected. "
+                "Some tickers may have stale or incomplete data."
+            )
+            with st.expander("Show warnings (click to expand)"):
+                st.code("\n".join(warning_lines[:60]))
+        else:
+            st.success("Data updated successfully!")
     else:
         st.warning(
             "Refresh ran but no data files changed — "
             "Yahoo Finance may be rate-limiting. Wait a few minutes and try again."
         )
+        if script_output.strip():
+            with st.expander("Script output (click to expand)"):
+                st.code(script_output[-3000:])
     st.rerun()
 
 
