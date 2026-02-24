@@ -156,21 +156,28 @@ The current schema has no concept of owner, card, or account on individual trans
 
 ### 3. Buying Opportunities Enhancement
 
-The scoring engine works but several inputs are missing or hardcoded.
-
-- [ ] **Surface individual score components in the UI.** The bar chart and table in `Buying_Opportunities.py` only show the final `buy_score`. Add columns for `score_52wk`, `score_target`, `score_diversity`, `score_risk`, and the live `market_sentiment_score` so you can see *why* a stock ranked where it did.
-
-- [ ] **Make score weights and `portfolio_cash` user-configurable.** The weights (0.25, 0.20, 0.20, 0.15, 0.15, 0.05) and `portfolio_cash=5000` are hardcoded in `data_processing.py`. Expose them as `st.slider` widgets on the Buying Opportunities page (or as sidebar inputs) so you can tune the model interactively.
-
-- [ ] **Fix the New Opportunities (Watchlist) tab.** It is permanently empty because `stock_info.csv` does not contain a `price` column for non-owned tickers. `process_investment_data.py` needs to also fetch and store the current price in `stock_info.csv` (e.g., add a `Price` column using `yf.Ticker.fast_info['last_price']`), or the watchlist scoring logic needs to pull price from a different source.
-
-- [ ] **Add RSI as a scoring signal.** The README already calls this out. Use `yfinance` historical data to compute a 14-day RSI during `process_investment_data.py` and store it in `stock_info.csv`. Add `score_rsi` (high score when RSI < 40, i.e. oversold) as an optional component in `calculate_buying_opportunity_scores`.
-
-- [ ] **Cache VIX/S&P 500 fetch separately.** `calculate_buying_opportunity_scores` fetches live VIX and S&P data every time the Streamlit cache is warm-reloaded. Move the market sentiment fetch into `process_investment_data.py` so it is stored in a small `market_context.json` and read from disk — this keeps the scoring function pure and fast.
+- [x] **Surface individual score components in the UI.** Breakdown table now shows `score_52wk`, `score_target`, `score_diversity`, `score_risk`, `score_sentiment` alongside the final `buy_score`.
+- [x] **Make score weights user-configurable.** `calculate_buying_opportunity_scores` now accepts `w_*` weight parameters. The page exposes sliders that re-score live without any extra API calls.
+- [x] **Cache VIX/S&P 500 fetch separately.** Extracted into `load_market_context()` with `@st.cache_data(ttl=3600)`. Scoring function accepts `market_sentiment_score` as a parameter; the page passes the cached value when re-scoring with custom weights.
+- [x] **Add data freshness banner and Refresh button to Buying Opportunities page.** Shows `Last Updated` from `stock_info.csv` with a color indicator (green/yellow/red). Refresh button triggers `process_investment_data.py` and clears both data caches.
+- [x] **Add market context strip.** Page displays current VIX, S&P 1-month return, and composite sentiment score at the top.
+- [ ] **Fix the New Opportunities (Watchlist) tab.** Still needs `process_investment_data.py` to store a `Price` column in `stock_info.csv` for non-owned tickers. Page is ready to display it once the data exists.
+- [ ] **Add RSI as a scoring signal.** Compute 14-day RSI in `process_investment_data.py`, store in `stock_info.csv`, add `score_rsi` (high when RSI < 40) as an optional weight in `calculate_buying_opportunity_scores`.
 
 ---
 
-### 4. Testing Framework
+### 4. App-Wide Data Freshness
+
+Identified during the Buying Opportunities work. Every page that displays financial data should make it obvious when that data was last updated and let the user trigger a refresh without going to the Home page.
+
+- [ ] **Audit all pages for staleness risk.** `stock_info.csv` drives fundamentals on Portfolio Overview, Industry & Sector Breakdown, Company Deep-Dive, and Stock Peer Analysis — all can show stale sector/PE/target data. `daily_stocks.csv` drives the trend chart and movers. `expenses.csv` / `income.csv` drive all budget pages. Document the freshness dependency for each page.
+- [ ] **Add a shared `render_freshness_badge()` helper to `scripts/utils.py`.** Takes a DataFrame and a date column, computes age, and renders a small colored badge (green < 1 day, yellow < 7 days, red ≥ 7 days). Call it at the top of every investment page.
+- [ ] **Add Refresh buttons to investment pages** (Portfolio Overview, Industry & Sector, Company Deep-Dive) so users don't have to navigate to Home to trigger `process_investment_data.py`.
+- [ ] **Add a Refresh button to budget pages** (Budget Overview, Expenses, Income) for `process_budget_data.py`, mirroring the pattern already in `main.py`.
+
+---
+
+### 5. Testing Framework (was §4)
 
 There are currently zero automated tests.
 
@@ -182,7 +189,7 @@ There are currently zero automated tests.
 
 ---
 
-### 5. UI / Theme Consistency
+### 6. UI / Theme Consistency (was §5)
 
 - [ ] **Create a shared theme module.** Extract a `scripts/theme.py` (or `scripts/styles.py`) that defines the color palette (greens/reds already used: `#2ecc71`, `#e74c3c`, `#3498db`), reusable CSS strings, and a `apply_page_style()` function. Call it from every page instead of repeating inline CSS or leaving pages unstyled.
 
@@ -194,7 +201,7 @@ There are currently zero automated tests.
 
 ---
 
-### 6. Documentation & Deployment (README.md)
+### 7. Documentation & Deployment (README.md) (was §6)
 
 The current README is a stub that references placeholder URLs and omits most setup details.
 
