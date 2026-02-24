@@ -132,19 +132,13 @@ Prioritized backlog of improvements. Work top-to-bottom within each section.
 
 ---
 
-### 1. Bug Fixes & Data Accuracy
+### 1. Bug Fixes & Data Accuracy ✅ *Completed — merged to main*
 
-**These are the highest priority** — some numbers displayed in the app are likely wrong.
-
-- [ ] **Fix `invested` / cost-basis mismatch.** `Portfolio_Overview.py` computes "Amount Invested" as `quantity × avg_cost` from `stocks.csv`, but `avg_cost` is the weighted average at the *current* moment, not a true cost basis. The real cost basis per ticker (accounting for all buys and sells) is the `equity` column in `daily_stocks.csv`. Align Portfolio Overview metrics to use the replayed cost basis from `daily_stocks` so ROE and Return % are accurate.
-
-- [ ] **Fix `stocks_complete.get("avg_cost", 0)` in `data_processing.py`.** Pandas DataFrames do not have a dict-style `.get()` that returns a scalar default. Line 277 (`stocks_complete.get("avg_cost", 0)`) will return `None` rather than `0` if the column is missing, causing a silent NaN multiply. Replace with `stocks_complete["avg_cost"] if "avg_cost" in stocks_complete.columns else 0`.
-
-- [ ] **Fix `Holdings_Leaderboard.py` missing page setup.** The page is missing both `st.set_page_config(...)` and `make_sidebar("Holdings Leaderboard")` calls that every other page has. Add them at the top of the file so navigation and page title work correctly.
-
-- [ ] **Fix `todays_stocks_complete` alias in `data_processing.py`.** Line 338 sets `"todays_stocks_complete": todays_stocks` (same object as `todays_stocks`), which means any page that merges in stock_info via `todays_stocks_complete` is silently getting the unmerged version. This key should contain the version that is joined with `stocks_complete`.
-
-- [ ] **Deduplicate `clean_amount_column`.** An identical helper function is copy-pasted into `Budget_Overview.py`, `Expenses.py`, and `Income.py`. Move it to `scripts/utils.py` (it essentially duplicates the private `_coerce_amount_numeric` already there) and import it in all three pages. This also ensures any future fix is applied everywhere at once.
+- [x] **Fix `invested` / cost-basis mismatch.** Portfolio Overview now pulls `equity` from `daily_stocks` (replayed transaction history) as the true cost basis, with a `quantity × avg_cost` fallback if daily history is unavailable.
+- [x] **Fix `stocks_complete.get("avg_cost", 0)` in `data_processing.py`.** Replaced with a proper column existence check.
+- [x] **Fix `Holdings_Leaderboard.py` missing page setup.** Added `set_page_config` and `make_sidebar`.
+- [x] **Fix `todays_stocks_complete` alias in `data_processing.py`.** Now correctly merges today's snapshot with `stocks_complete` fundamentals.
+- [x] **Deduplicate `clean_amount_column`.** Moved to `scripts/utils.py`; imported in `Budget_Overview.py`, `Expenses.py`, and `Income.py`.
 
 ---
 
