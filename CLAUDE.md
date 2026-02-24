@@ -201,7 +201,23 @@ There are currently zero automated tests.
 
 ---
 
-### 7. Documentation & Deployment (README.md) (was §6)
+### 7. Performance — Data Loading & Refresh Speed
+
+The two biggest pain points are the initial page load time and how long a full investment refresh takes. Both should be improved before the app is used regularly by two people.
+
+- [ ] **Profile the cold-start load time.** `load_and_preprocess_data()` reads 6 CSVs, runs two merges, computes daily equity aggregates, and runs buying opportunity scoring (including a VIX call). Instrument with `time.perf_counter` to identify the slowest steps before optimizing.
+
+- [ ] **Parallelize yfinance fetches in `process_investment_data.py`.** The refresh script fetches each ticker sequentially with a `time.sleep(0.1)` gap — for a 20+ stock portfolio this takes several minutes. Use `concurrent.futures.ThreadPoolExecutor` with a modest limit (e.g. 5 workers) to fetch multiple tickers in parallel while staying within rate limits.
+
+- [ ] **Skip unchanged tickers in `create_stock_info_table`.** Even in incremental mode, fundamentals are re-fetched for every ticker on every run. Add a staleness threshold (e.g. skip tickers whose `Last Updated` is less than 24 hours old) so only genuinely stale entries are re-fetched.
+
+- [ ] **Defer buying opportunity scoring out of `load_and_preprocess_data`.** Scoring runs on every cold cache load, even on pages that never show scores. Move it to a separate `@st.cache_data` function called only by the Buying Opportunities page so all other pages load faster.
+
+- [ ] **Add a `ttl` to `load_and_preprocess_data` cache.** The cache currently never expires on its own — it only clears when a Refresh button is pressed. A `ttl` (e.g. 4 hours) would auto-refresh data for active sessions without manual intervention.
+
+---
+
+### 8. Documentation & Deployment (README.md) (was §6)
 
 The current README is a stub that references placeholder URLs and omits most setup details.
 
