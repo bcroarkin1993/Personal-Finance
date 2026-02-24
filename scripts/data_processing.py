@@ -118,7 +118,7 @@ def normalize_stock_info_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 # ----- Data loading function -----
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_main_data() -> Dict[str, Any]:
     if RUN_MODE == "testing":
         print(f"Project Root Dir: {PROJECT_ROOT}")
@@ -394,7 +394,7 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_and_preprocess_data() -> Dict[str, Any]:
     raw_data = load_main_data()
     return preprocess_data(raw_data)

@@ -1,8 +1,24 @@
 import sys
 import subprocess
+import pathlib
 import pandas as pd
 import streamlit as st
 from typing import Dict, Any, Optional
+
+_UTILS_DIR = pathlib.Path(__file__).resolve().parent   # scripts/
+_PROJECT_ROOT = _UTILS_DIR.parent                      # project root
+_DATA_DIR = _PROJECT_ROOT / "data"
+
+
+def _latest_csv_mtime() -> float:
+    """Return the most recent modification time of any CSV in data/."""
+    try:
+        return max(
+            (f.stat().st_mtime for f in _DATA_DIR.iterdir() if f.suffix == ".csv"),
+            default=0.0,
+        )
+    except Exception:
+        return 0.0
 
 def _data_age_days(date_val) -> Optional[float]:
     """Returns how many days ago a date was, or None if unparseable."""
@@ -45,22 +61,49 @@ def render_freshness_badge(date_val, label: str = "Data last updated") -> None:
     )
 
 
-def run_subprocess_refresh(script_path: str, clear_cache_fn, spinner_msg: str = "Refreshing data...") -> None:
+def run_subprocess_refresh(
+    script_path: str,
+    clear_cache_fn,
+    spinner_msg: str = "Refreshing data...",
+    full_refresh: bool = False,
+) -> None:
     """
     Runs a data refresh script as a subprocess using the current Python interpreter,
     clears the provided Streamlit cache function, then reruns the page.
-    Uses sys.executable so the correct venv Python is always called.
+
+    Uses an absolute path derived from the project root so the script is found
+    regardless of the working directory Streamlit was launched from.
+
+    full_refresh=True passes --full to the script for a complete historical rebuild.
     """
+    abs_script = str(_PROJECT_ROOT / script_path)
+    cmd = [sys.executable, abs_script]
+    if full_refresh:
+        cmd.append("--full")
+
+    mtime_before = _latest_csv_mtime()
+
     with st.spinner(spinner_msg):
         try:
-            subprocess.run([sys.executable, script_path], check=True)
-            clear_cache_fn()
-            st.success("Data refreshed! Reloading...")
-            st.rerun()
+            subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
-            st.error(f"Refresh failed (exit code {e.returncode}). Check that your data files are in place.")
+            st.error(f"Refresh script failed (exit code {e.returncode}).")
+            return
         except Exception as e:
             st.error(f"Refresh failed: {e}")
+            return
+
+    clear_cache_fn()
+    mtime_after = _latest_csv_mtime()
+
+    if mtime_after > mtime_before:
+        st.success("Data updated successfully!")
+    else:
+        st.warning(
+            "Refresh ran but no data files changed — "
+            "Yahoo Finance may be rate-limiting. Wait a few minutes and try again."
+        )
+    st.rerun()
 
 
 def clean_amount_column(df: pd.DataFrame, amount_col: str = "amount") -> pd.DataFrame:

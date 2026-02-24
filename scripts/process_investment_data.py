@@ -56,10 +56,11 @@ def _replay_transactions(details):
             total_cost += qty * price
             total_quantity += qty
         elif txn["buy_sell"] == "sell":
-            if total_quantity > 0:
+            sell_qty = min(qty, max(total_quantity, 0.0))  # never sell more than held
+            if total_quantity > 0 and sell_qty > 0:
                 avg_cost_at_sale = total_cost / total_quantity
-                total_cost -= qty * avg_cost_at_sale
-            total_quantity -= qty
+                total_cost -= sell_qty * avg_cost_at_sale
+            total_quantity -= sell_qty
     return total_quantity, total_cost
 
 
@@ -208,6 +209,9 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
             existing_df = pd.read_csv(csv_path)
             if not existing_df.empty and "Date" in existing_df.columns:
                 existing_df["Date"] = pd.to_datetime(existing_df["Date"])
+                # Purge any corrupt negative-shares rows from previous script versions
+                if "Shares_Held" in existing_df.columns:
+                    existing_df = existing_df[existing_df["Shares_Held"] > 0]
                 last_date = existing_df["Date"].max()
                 start_date = last_date.strftime("%Y-%m-%d")
                 print(f"     Found existing data. Fetching new data from {start_date}...")
@@ -260,10 +264,11 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
                         current_cost_basis += (t['qty'] * t['price'])
                         current_qty += t['qty']
                     elif t['type'] == 'sell':
-                        if current_qty > 0:
+                        sell_qty = min(t['qty'], max(current_qty, 0.0))
+                        if current_qty > 0 and sell_qty > 0:
                             avg = current_cost_basis / current_qty
-                            current_cost_basis -= (t['qty'] * avg)
-                        current_qty -= t['qty']
+                            current_cost_basis -= (sell_qty * avg)
+                        current_qty -= sell_qty
                     txn_idx += 1
 
                 if current_qty > 0.001:
@@ -293,6 +298,7 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
 
         combined = pd.concat([existing_df, new_df], ignore_index=True)
         combined = combined.drop_duplicates(subset=["Date", "Stock"], keep="last")
+        combined = combined[combined["Shares_Held"] > 0]
         combined = combined.sort_values(by=["Stock", "Date"])
         combined["Daily_Profit"] = combined.groupby("Stock")["Total_Profit"].diff().fillna(0)
         combined["Daily_Pct_Profit"] = combined.groupby("Stock")["Close"].pct_change().fillna(0) * 100
