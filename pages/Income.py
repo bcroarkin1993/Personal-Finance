@@ -4,6 +4,7 @@ import plotly.express as px
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
+from scripts.utils import clean_amount_column
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Income Analysis", page_icon="💵", layout="wide")
@@ -20,14 +21,6 @@ income_df = data["income"].copy()
 # Rename Source -> Category for consistency
 if "source" in income_df.columns:
     income_df = income_df.rename(columns={"source": "category"})
-
-
-def clean_amount_column(df):
-    if "amount" in df.columns:
-        df["amount"] = df["amount"].astype(str).str.replace(r"[$,]", "", regex=True)
-        df["amount"] = df["amount"].str.replace(r"^\((.*)\)$", r"-\1", regex=True)
-        df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
-    return df
 
 
 income_df = clean_amount_column(income_df)

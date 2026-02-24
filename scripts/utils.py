@@ -2,6 +2,20 @@ import pandas as pd
 import streamlit as st
 from typing import Dict, Any
 
+def clean_amount_column(df: pd.DataFrame, amount_col: str = "amount") -> pd.DataFrame:
+    """
+    Coerces an amount column to numeric, handling formatted strings such as
+    '$1,234.56', '1,234', and accounting-style negatives like '(500.00)'.
+    """
+    if amount_col in df.columns:
+        s = df[amount_col].astype(str)
+        s = s.str.replace(r"[$,]", "", regex=True)
+        s = s.str.replace(r"^\((.*)\)$", r"-\1", regex=True)
+        df = df.copy()
+        df[amount_col] = pd.to_numeric(s, errors="coerce").fillna(0.0)
+    return df
+
+
 def get_last_refresh_date_from_df(df: pd.DataFrame, date_col: str = "date") -> str:
     """
     Get the most recent date from a dataframe date column.

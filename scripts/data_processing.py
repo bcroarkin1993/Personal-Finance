@@ -274,7 +274,8 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Add invested column if missing
     if "invested" not in stocks_complete.columns and "quantity" in stocks_complete.columns:
-        stocks_complete["invested"] = stocks_complete["quantity"] * stocks_complete.get("avg_cost", 0)
+        avg_cost_col = stocks_complete["avg_cost"] if "avg_cost" in stocks_complete.columns else 0
+        stocks_complete["invested"] = stocks_complete["quantity"] * avg_cost_col
 
     # ----- Daily Stocks -----
     daily_stocks_complete = daily_stocks.copy()
@@ -292,9 +293,16 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # ----- Today's Stocks -----
     todays_stocks = pd.DataFrame()
+    todays_stocks_complete = pd.DataFrame()
     if not daily_stocks_complete.empty and "datetime" in daily_stocks_complete.columns:
         max_date = daily_stocks_complete["datetime"].max()
         todays_stocks = daily_stocks_complete[daily_stocks_complete["datetime"] == max_date].copy()
+        # Enrich with fundamentals (sector, industry, pe_ratio, etc.) from stocks_complete
+        if not todays_stocks.empty and not stocks_complete.empty and "stock" in todays_stocks.columns:
+            fund_cols = [c for c in stocks_complete.columns if c not in todays_stocks.columns] + ["stock"]
+            todays_stocks_complete = pd.merge(todays_stocks, stocks_complete[fund_cols], on="stock", how="left")
+        else:
+            todays_stocks_complete = todays_stocks.copy()
 
     # ----- Buying Ops -----
     rebuy_df = pd.DataFrame()
@@ -335,7 +343,7 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         "daily_stocks_complete": daily_stocks_complete,
         "daily_equity": daily_equity,
         "todays_stocks": todays_stocks,
-        "todays_stocks_complete": todays_stocks,  # Alias
+        "todays_stocks_complete": todays_stocks_complete,
         "daily_gainers": pd.DataFrame(),  # Simplified for safe loading
         "daily_losers": pd.DataFrame(),
         "sector_values": sector_values,

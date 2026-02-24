@@ -20,29 +20,41 @@ stocks_complete = data["stocks_complete"].copy()
 daily_stocks = data["daily_stocks"].copy()
 daily_equity = data.get("daily_equity", pd.DataFrame())
 
-# ----------------- DATA CLEANING (SNAKE_CASE FIX) ----------------- #
+# ----------------- DATA CLEANING ----------------- #
 # The data loader converts columns to snake_case (e.g., Market_Value -> market_value)
-# We ensure numeric types here using the correct column names.
 
 # 1. Market Value
 if "market_value" in stocks_complete.columns:
     stocks_complete["market_value"] = pd.to_numeric(stocks_complete["market_value"], errors="coerce").fillna(0)
 else:
-    # Fallback if column missing
     stocks_complete["market_value"] = 0.0
 
-# 2. Invested Amount
-# If 'invested' exists from data_processing, use it. Otherwise calculate from qty * avg_cost
-if "invested" not in stocks_complete.columns:
+# 2. True Cost Basis from daily_stocks (replayed transaction history)
+# daily_stocks.equity = total dollars deployed per ticker, adjusted for all buys and partial sells.
+# This is more accurate than quantity * avg_cost, which drifts when shares are sold.
+if not daily_stocks.empty and {"stock", "equity", "date"}.issubset(daily_stocks.columns):
+    daily_stocks["date"] = pd.to_datetime(daily_stocks["date"], errors="coerce")
+    latest_date = daily_stocks["date"].max()
+    cost_basis = (
+        daily_stocks[daily_stocks["date"] == latest_date]
+        .groupby("stock")["equity"]
+        .sum()
+        .reset_index()
+        .rename(columns={"equity": "true_cost_basis"})
+    )
+    stocks_complete = pd.merge(stocks_complete, cost_basis, on="stock", how="left")
+    stocks_complete["invested"] = pd.to_numeric(stocks_complete["true_cost_basis"], errors="coerce").fillna(0)
+else:
+    # Fallback: quantity * avg_cost if daily history is unavailable
     if "quantity" in stocks_complete.columns and "avg_cost" in stocks_complete.columns:
-        stocks_complete["invested"] = stocks_complete["quantity"] * stocks_complete["avg_cost"]
+        stocks_complete["invested"] = (
+            pd.to_numeric(stocks_complete["quantity"], errors="coerce").fillna(0) *
+            pd.to_numeric(stocks_complete["avg_cost"], errors="coerce").fillna(0)
+        )
     else:
         stocks_complete["invested"] = 0.0
-else:
-    stocks_complete["invested"] = pd.to_numeric(stocks_complete["invested"], errors="coerce").fillna(0)
 
-# 3. Equity Change (Profit/Loss)
-# Calculate explicitly to be safe: Market Value - Invested
+# 3. Equity Change (Profit/Loss) = current market value minus true cost basis
 stocks_complete["equity_change"] = stocks_complete["market_value"] - stocks_complete["invested"]
 
 # ----------------- SECTION 1: SUMMARY METRICS (2x3 GRID) ----------------- #

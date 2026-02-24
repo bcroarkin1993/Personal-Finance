@@ -10,6 +10,11 @@ import streamlit as st
 from PIL import Image
 
 from scripts.data_processing import load_and_preprocess_data
+from scripts.navigation import make_sidebar
+
+st.set_page_config(page_title="Holdings Leaderboard", page_icon="🏆", layout="wide")
+
+make_sidebar("Holdings Leaderboard")
 
 st.title("🏆 Holdings Leaderboard")
 

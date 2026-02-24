@@ -3,8 +3,8 @@ import pandas as pd
 import altair as alt
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data
-# IMPORT NAVIGATION
 from scripts.navigation import make_sidebar
+from scripts.utils import clean_amount_column
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide")
@@ -24,15 +24,6 @@ if "expense_category" in expenses_df.columns:
     expenses_df = expenses_df.rename(columns={"expense_category": "category"})
 if "source" in income_df.columns:
     income_df = income_df.rename(columns={"source": "category"})
-
-
-# --- Helper to clean numeric columns ---
-def clean_amount_column(df):
-    if "amount" in df.columns:
-        df["amount"] = df["amount"].astype(str).str.replace(r"[$,]", "", regex=True)
-        df["amount"] = df["amount"].str.replace(r"^\((.*)\)$", r"-\1", regex=True)
-        df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
-    return df
 
 
 # Clean amounts
