@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
 from scripts.utils import (
     calculate_average_monthly_total,
@@ -12,6 +12,7 @@ from scripts.utils import (
     get_last_refresh_date_from_df,
     get_portfolio_snapshot,
     run_subprocess_refresh,
+    render_refresh_status,
 )
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -93,6 +94,9 @@ st.markdown(
 )
 
 # ----------------- HOME PAGE LOGIC ----------------- #
+
+# Show any pending refresh result from the previous run
+render_refresh_status()
 
 # Load data safely (returns empty DFs if files missing)
 data: Dict[str, Any] = load_and_preprocess_data()
@@ -201,7 +205,7 @@ with left:
     if st.button("🔄 Refresh Budget Data"):
         run_subprocess_refresh(
             "scripts/process_budget_data.py",
-            load_and_preprocess_data.clear,
+            clear_all_caches,
             "Processing Budget.xlsx...",
         )
 
@@ -236,7 +240,7 @@ with right:
         if st.button("🔄 Refresh Investment Data", use_container_width=True):
             run_subprocess_refresh(
                 "scripts/process_investment_data.py",
-                load_and_preprocess_data.clear,
+                clear_all_caches,
                 "Fetching latest prices (incremental)...",
             )
     with b_full:
@@ -247,7 +251,7 @@ with right:
         ):
             run_subprocess_refresh(
                 "scripts/process_investment_data.py",
-                load_and_preprocess_data.clear,
+                clear_all_caches,
                 "Full rebuild in progress (this takes ~5 min)...",
                 full_refresh=True,
             )

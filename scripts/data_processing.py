@@ -398,3 +398,10 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
 def load_and_preprocess_data() -> Dict[str, Any]:
     raw_data = load_main_data()
     return preprocess_data(raw_data)
+
+
+def clear_all_caches() -> None:
+    """Clear all cache layers so the next render reads fresh CSVs from disk."""
+    load_main_data.clear()
+    load_and_preprocess_data.clear()
+    load_market_context.clear()

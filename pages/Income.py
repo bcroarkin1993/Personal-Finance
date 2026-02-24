@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.utils import clean_amount_column, render_freshness_badge, run_subprocess_refresh
+from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Income Analysis", page_icon="💵", layout="wide")
@@ -20,9 +20,11 @@ with col_refresh:
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_budget_data.py",
-            load_and_preprocess_data.clear,
+            clear_all_caches,
             "Processing Budget.xlsx...",
         )
+
+render_refresh_status()
 
 # ----------------- DATA LOADING & CLEANING ----------------- #
 data = load_and_preprocess_data()

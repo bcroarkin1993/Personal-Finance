@@ -61,6 +61,36 @@ def render_freshness_badge(date_val, label: str = "Data last updated") -> None:
     )
 
 
+_REFRESH_STATUS_KEY = "_last_refresh_status"
+
+
+def render_refresh_status() -> None:
+    """
+    Display any pending refresh status message left by run_subprocess_refresh.
+    Call this once near the top of any page that has a Refresh button, AFTER
+    make_sidebar() and BEFORE data loading — it will appear on the render that
+    follows the rerun triggered by the refresh.
+    """
+    status = st.session_state.pop(_REFRESH_STATUS_KEY, None)
+    if status is None:
+        return
+    kind = status.get("type")
+    msg = status.get("msg", "")
+    detail = status.get("detail", "")
+    if kind == "success":
+        st.success(msg)
+    elif kind == "warning":
+        st.warning(msg)
+        if detail:
+            with st.expander("Show details (click to expand)"):
+                st.code(detail)
+    elif kind == "error":
+        st.error(msg)
+        if detail:
+            with st.expander("Script output (click to expand)"):
+                st.code(detail)
+
+
 def run_subprocess_refresh(
     script_path: str,
     clear_cache_fn,
@@ -69,12 +99,13 @@ def run_subprocess_refresh(
 ) -> None:
     """
     Runs a data refresh script as a subprocess using the current Python interpreter,
-    clears the provided Streamlit cache function, then reruns the page.
+    clears the provided cache function, stores the outcome in st.session_state, then
+    calls st.rerun(). The stored status is displayed on the next render by
+    render_refresh_status().
 
     Uses an absolute path derived from the project root so the script is found
     regardless of the working directory Streamlit was launched from.
-
-    full_refresh=True passes --full to the script for a complete historical rebuild.
+    full_refresh=True appends --full to the script for a complete historical rebuild.
     """
     abs_script = str(_PROJECT_ROOT / script_path)
     cmd = [sys.executable, abs_script]
@@ -87,24 +118,30 @@ def run_subprocess_refresh(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True)
         except Exception as e:
-            st.error(f"Refresh failed: {e}")
+            st.session_state[_REFRESH_STATUS_KEY] = {
+                "type": "error",
+                "msg": f"Refresh failed: {e}",
+            }
+            st.rerun()
             return
 
     script_output = (result.stdout or "") + (result.stderr or "")
 
     # Non-zero exit code = hard crash in the script
     if result.returncode != 0:
-        st.error(f"Refresh script failed (exit code {result.returncode}).")
-        if script_output.strip():
-            with st.expander("Script output (click to expand)"):
-                st.code(script_output[-3000:])
+        st.session_state[_REFRESH_STATUS_KEY] = {
+            "type": "error",
+            "msg": f"Refresh script failed (exit code {result.returncode}).",
+            "detail": script_output[-3000:] if script_output.strip() else "",
+        }
+        st.rerun()
         return
 
     clear_cache_fn()
     mtime_after = _latest_csv_mtime()
 
-    # Even with exit code 0, yfinance can print "X Failed Downloads" or
-    # JSONDecodeError to stdout without raising — detect those here.
+    # Even with exit code 0, yfinance prints "X Failed Downloads" / JSONDecodeError
+    # to stdout without raising — detect those and surface them.
     warning_lines = [
         line for line in script_output.splitlines()
         if any(kw in line.lower() for kw in ("failed", "error", "exception", "traceback"))
@@ -112,22 +149,30 @@ def run_subprocess_refresh(
 
     if mtime_after > mtime_before:
         if warning_lines:
-            st.warning(
-                f"Data saved, but {len(warning_lines)} warning(s) were detected. "
-                "Some tickers may have stale or incomplete data."
-            )
-            with st.expander("Show warnings (click to expand)"):
-                st.code("\n".join(warning_lines[:60]))
+            st.session_state[_REFRESH_STATUS_KEY] = {
+                "type": "warning",
+                "msg": (
+                    f"Data saved, but {len(warning_lines)} warning(s) were detected. "
+                    "Some tickers may have stale or incomplete data."
+                ),
+                "detail": "\n".join(warning_lines[:60]),
+            }
         else:
-            st.success("Data updated successfully!")
+            st.session_state[_REFRESH_STATUS_KEY] = {
+                "type": "success",
+                "msg": "Data updated successfully!",
+            }
     else:
-        st.warning(
-            "Refresh ran but no data files changed — "
-            "Yahoo Finance may be rate-limiting. Wait a few minutes and try again."
-        )
-        if script_output.strip():
-            with st.expander("Script output (click to expand)"):
-                st.code(script_output[-3000:])
+        detail = script_output[-3000:] if script_output.strip() else ""
+        st.session_state[_REFRESH_STATUS_KEY] = {
+            "type": "warning",
+            "msg": (
+                "Refresh ran but no data files changed — "
+                "Yahoo Finance may be rate-limiting. Wait a few minutes and try again."
+            ),
+            "detail": detail,
+        }
+
     st.rerun()
 
 
