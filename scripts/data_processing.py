@@ -2,7 +2,7 @@ import json
 import numpy as np
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import pandas as pd
 import streamlit as st
 import yfinance as yf
@@ -162,54 +162,84 @@ def load_main_data() -> Dict[str, Any]:
     }
 
 
+# ----- MARKET CONTEXT -----
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_market_context() -> Dict[str, float]:
+    """
+    Fetches VIX and S&P 500 data from yfinance.
+    Cached for 1 hour (ttl=3600) so repeated page loads don't hammer the API.
+    Returns a dict with vix, sp500_1mo_perf (%), and market_sentiment_score (0-1).
+    """
+    try:
+        vix_data = yf.Ticker("^VIX").history(period="5d")
+        vix = float(vix_data["Close"].iloc[-1]) if not vix_data.empty else 20.0
+        sp500 = yf.Ticker("^GSPC").history(period="1mo")
+        sp500_perf = (
+            (sp500["Close"].iloc[-1] - sp500["Close"].iloc[0]) / sp500["Close"].iloc[0]
+            if not sp500.empty else 0.0
+        )
+    except Exception:
+        vix = 20.0
+        sp500_perf = 0.0
+
+    sentiment = float(np.clip((vix / 40) + (1 - sp500_perf), 0, 1))
+    return {
+        "vix": round(vix, 2),
+        "sp500_1mo_perf_pct": round(float(sp500_perf) * 100, 2),
+        "market_sentiment_score": round(sentiment, 4),
+    }
+
+
 # ----- SCORING LOGIC -----
 
-def calculate_buying_opportunity_scores(df: pd.DataFrame, portfolio_cash: float = 0) -> pd.DataFrame:
+def calculate_buying_opportunity_scores(
+    df: pd.DataFrame,
+    portfolio_cash: float = 0,
+    market_sentiment_score: Optional[float] = None,
+    w_52wk: float = 0.25,
+    w_diversity: float = 0.20,
+    w_target: float = 0.20,
+    w_risk: float = 0.15,
+    w_sentiment: float = 0.15,
+    w_cash: float = 0.05,
+) -> pd.DataFrame:
+    """
+    Scores stocks on a 0-100 composite scale.
+
+    Weights (w_*) must sum to 1.0. Market sentiment is a single shared score
+    passed in from load_market_context() to avoid redundant API calls.
+    If market_sentiment_score is None, it is fetched from load_market_context().
+    """
     if df.empty:
         return df
 
     df = df.copy()
 
-    # Validate required columns exist before processing
     required = ["price", "52_week_high", "52_week_low", "target_mean_price"]
     for r in required:
         if r not in df.columns:
-            # If missing essential columns, return empty to be safe
             return pd.DataFrame()
 
-    # (Keep your existing scoring logic here)
-    try:
-        vix_data = yf.Ticker("^VIX").history(period="5d")
-        vix = vix_data["Close"].iloc[-1] if not vix_data.empty else 20
-        sp500 = yf.Ticker("^GSPC").history(period="1mo")
-        if not sp500.empty:
-            sp500_perf = (sp500["Close"].iloc[-1] - sp500["Close"].iloc[0]) / sp500["Close"].iloc[0]
-        else:
-            sp500_perf = 0
-    except Exception:
-        vix = 20
-        sp500_perf = 0
+    # Fetch market context only if not provided
+    if market_sentiment_score is None:
+        ctx = load_market_context()
+        market_sentiment_score = ctx["market_sentiment_score"]
 
-    market_sentiment_score = np.clip((vix / 40) + (1 - sp500_perf), 0, 1)
-
-    def normalize(series):
-        min_val = series.min()
-        max_val = series.max()
-        if max_val == min_val: return 0
-        return (series - min_val) / (max_val - min_val)
-
-    # Fill defaults
+    # Coerce numerics
     df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0)
     df["52_week_high"] = pd.to_numeric(df["52_week_high"], errors="coerce").fillna(df["price"])
     df["52_week_low"] = pd.to_numeric(df["52_week_low"], errors="coerce").fillna(df["price"])
     df["target_mean_price"] = pd.to_numeric(df["target_mean_price"], errors="coerce").fillna(df["price"])
 
-    if "portfolio_diversity" not in df.columns: df["portfolio_diversity"] = 0
-    df["portfolio_diversity"] = pd.to_numeric(df["portfolio_diversity"], errors='coerce').fillna(0)
+    if "portfolio_diversity" not in df.columns:
+        df["portfolio_diversity"] = 0
+    df["portfolio_diversity"] = pd.to_numeric(df["portfolio_diversity"], errors="coerce").fillna(0)
 
-    # Scores
+    # Individual signal scores (each 0-1)
     df["discount_pct"] = (df["52_week_high"] - df["price"]) / df["52_week_high"].replace(0, 1)
     df["score_52wk"] = (df["discount_pct"] / 0.50).clip(0, 1).fillna(0)
+
     df["score_diversity"] = 1 - (df["portfolio_diversity"] / 100).clip(0, 1)
 
     target_upside = (df["target_mean_price"] - df["price"]) / df["price"].replace(0, 1)
@@ -217,20 +247,25 @@ def calculate_buying_opportunity_scores(df: pd.DataFrame, portfolio_cash: float 
 
     risk_cols = ["audit_risk", "board_risk", "compensation_risk", "shareholder_rights_risk"]
     for c in risk_cols:
-        if c not in df.columns: df[c] = 5
+        if c not in df.columns:
+            df[c] = 5
     df["avg_risk"] = df[risk_cols].mean(axis=1)
     df["score_risk"] = (1 - (df["avg_risk"] / 10)).clip(0, 1)
 
+    # Market sentiment is the same for all rows — store for display
+    df["score_sentiment"] = float(market_sentiment_score)
+
     cash_bonus = min(portfolio_cash / 10000, 1.0)
+    df["score_cash"] = cash_bonus
 
     df["buy_score"] = (
-                              (0.25 * df["score_52wk"]) +
-                              (0.20 * df["score_diversity"]) +
-                              (0.20 * df["score_target"]) +
-                              (0.15 * df["score_risk"]) +
-                              (0.15 * market_sentiment_score) +
-                              (0.05 * cash_bonus)
-                      ) * 100
+        (w_52wk      * df["score_52wk"]) +
+        (w_diversity  * df["score_diversity"]) +
+        (w_target     * df["score_target"]) +
+        (w_risk       * df["score_risk"]) +
+        (w_sentiment  * df["score_sentiment"]) +
+        (w_cash       * df["score_cash"])
+    ) * 100
 
     return df.sort_values("buy_score", ascending=False)
 
@@ -304,23 +339,27 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             todays_stocks_complete = todays_stocks.copy()
 
+    # ----- Market Context (fetched once, cached 1hr, shared with scoring) -----
+    market_ctx = load_market_context()
+    mss = market_ctx["market_sentiment_score"]
+
     # ----- Buying Ops -----
     rebuy_df = pd.DataFrame()
     new_buy_df = pd.DataFrame()
 
-    # Only run logic if we have valid data
     if not stocks_complete.empty and "price" in stocks_complete.columns:
-        rebuy_df = calculate_buying_opportunity_scores(stocks_complete, portfolio_cash=5000)
+        rebuy_df = calculate_buying_opportunity_scores(
+            stocks_complete, portfolio_cash=5000, market_sentiment_score=mss
+        )
 
-    # Watchlist logic
+    # Watchlist logic (requires a 'price' column in stock_info — added by process_investment_data)
     if not stock_info.empty and not stocks.empty:
         owned = stocks["stock"].unique() if "stock" in stocks.columns else []
         watchlist = stock_info[~stock_info["stock"].isin(owned)].copy()
-        # For watchlist, we need price. If stock_info doesn't have it (it usually doesn't update live), we might skip
-        # checking price for now or assume stock_info has a 'currentPrice' field if you added it.
-        # Assuming you might add it:
-        if "price" in watchlist.columns:  # You'd need to add this to stock_info generation
-            new_buy_df = calculate_buying_opportunity_scores(watchlist)
+        if "price" in watchlist.columns:
+            new_buy_df = calculate_buying_opportunity_scores(
+                watchlist, market_sentiment_score=mss
+            )
 
     # ----- Aggregates -----
     sector_values = pd.DataFrame()
@@ -351,6 +390,7 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         "cap_sizes": pd.DataFrame(),
         "rebuying_opportunities": rebuy_df,
         "buying_opportunities": new_buy_df,
+        "market_context": market_ctx,
     }
 
 
