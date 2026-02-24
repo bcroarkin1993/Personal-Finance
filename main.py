@@ -1,3 +1,4 @@
+import sys
 import subprocess
 from typing import Dict, Any
 
@@ -202,7 +203,7 @@ with left:
         with st.spinner("Processing Budget.xlsx..."):
             try:
                 subprocess.run(
-                    ["python", "scripts/process_budget_data.py"],
+                    [sys.executable, "scripts/process_budget_data.py"],
                     check=True,
                 )
                 load_and_preprocess_data.clear()
@@ -241,7 +242,7 @@ with right:
         with st.spinner("Fetching market data (Incremental)..."):
             try:
                 subprocess.run(
-                    ["python", "scripts/process_investment_data.py"],
+                    [sys.executable, "scripts/process_investment_data.py"],
                     check=True,
                 )
                 load_and_preprocess_data.clear()

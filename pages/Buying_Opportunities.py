@@ -1,3 +1,4 @@
+import sys
 import subprocess
 
 import streamlit as st
@@ -38,7 +39,7 @@ with col_refresh:
     if st.button("🔄 Refresh Data", use_container_width=True):
         with st.spinner("Fetching latest prices and fundamentals..."):
             try:
-                subprocess.run(["python", "scripts/process_investment_data.py"], check=True)
+                subprocess.run([sys.executable, "scripts/process_investment_data.py"], check=True)
                 load_and_preprocess_data.clear()
                 load_market_context.clear()
                 st.success("Data refreshed! Reloading...")

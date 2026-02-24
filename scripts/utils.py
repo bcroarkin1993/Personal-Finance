@@ -1,6 +1,67 @@
+import sys
+import subprocess
 import pandas as pd
 import streamlit as st
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+def _data_age_days(date_val) -> Optional[float]:
+    """Returns how many days ago a date was, or None if unparseable."""
+    try:
+        ts = pd.to_datetime(date_val)
+        return (pd.Timestamp.now() - ts).total_seconds() / 86400
+    except Exception:
+        return None
+
+
+def render_freshness_badge(date_val, label: str = "Data last updated") -> None:
+    """
+    Renders a small color-coded freshness indicator inline.
+      Green  — updated within the last 24 hours
+      Yellow — 1–7 days old
+      Red    — 7+ days old or date unknown
+    Call this near the top of any page that displays time-sensitive data.
+    """
+    age = _data_age_days(date_val)
+    try:
+        date_str = pd.to_datetime(date_val).strftime("%b %d, %Y")
+    except Exception:
+        date_str = str(date_val)
+
+    if age is None:
+        color, note = "#e74c3c", "unknown — refresh recommended"
+    elif age < 1:
+        color, note = "#2ecc71", "today ✓"
+    elif age < 7:
+        color, note = "#f39c12", f"{int(age)}d ago"
+    else:
+        color, note = "#e74c3c", f"{int(age)}d ago — refresh recommended"
+
+    st.markdown(
+        f"<div style='font-size:0.82rem; margin-bottom:6px;'>"
+        f"{label}: <span style='color:{color}; font-weight:600;'>{date_str}</span>"
+        f" <span style='color:{color}; opacity:0.85;'>({note})</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def run_subprocess_refresh(script_path: str, clear_cache_fn, spinner_msg: str = "Refreshing data...") -> None:
+    """
+    Runs a data refresh script as a subprocess using the current Python interpreter,
+    clears the provided Streamlit cache function, then reruns the page.
+    Uses sys.executable so the correct venv Python is always called.
+    """
+    with st.spinner(spinner_msg):
+        try:
+            subprocess.run([sys.executable, script_path], check=True)
+            clear_cache_fn()
+            st.success("Data refreshed! Reloading...")
+            st.rerun()
+        except subprocess.CalledProcessError as e:
+            st.error(f"Refresh failed (exit code {e.returncode}). Check that your data files are in place.")
+        except Exception as e:
+            st.error(f"Refresh failed: {e}")
+
 
 def clean_amount_column(df: pd.DataFrame, amount_col: str = "amount") -> pd.DataFrame:
     """

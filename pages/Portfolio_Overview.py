@@ -1,3 +1,4 @@
+import sys
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -5,6 +6,7 @@ import plotly.express as px
 from datetime import date, timedelta
 from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
+from scripts.utils import render_freshness_badge, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wide")
@@ -12,13 +14,30 @@ st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wi
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Portfolio Overview")
 
-st.title("📈 Portfolio Overview")
+col_title, col_refresh = st.columns([4, 1])
+with col_title:
+    st.title("📈 Portfolio Overview")
+with col_refresh:
+    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        run_subprocess_refresh(
+            "scripts/process_investment_data.py",
+            load_and_preprocess_data.clear,
+            "Fetching latest prices and fundamentals...",
+        )
 
 # ----------------- DATA LOADING ----------------- #
 data = load_and_preprocess_data()
 stocks_complete = data["stocks_complete"].copy()
 daily_stocks = data["daily_stocks"].copy()
 daily_equity = data.get("daily_equity", pd.DataFrame())
+stock_info = data.get("stock_info", pd.DataFrame())
+
+# Freshness badges
+if not stock_info.empty and "last_updated" in stock_info.columns:
+    render_freshness_badge(pd.to_datetime(stock_info["last_updated"]).max(), label="Fundamentals last updated")
+if not daily_stocks.empty and "date" in daily_stocks.columns:
+    render_freshness_badge(pd.to_datetime(daily_stocks["date"], errors="coerce").max(), label="Price history through")
 
 # ----------------- DATA CLEANING ----------------- #
 # The data loader converts columns to snake_case (e.g., Market_Value -> market_value)

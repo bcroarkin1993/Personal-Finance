@@ -11,12 +11,23 @@ from PIL import Image
 
 from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
+from scripts.utils import render_freshness_badge, run_subprocess_refresh
 
 st.set_page_config(page_title="Holdings Leaderboard", page_icon="🏆", layout="wide")
 
 make_sidebar("Holdings Leaderboard")
 
-st.title("🏆 Holdings Leaderboard")
+col_title, col_refresh = st.columns([4, 1])
+with col_title:
+    st.title("🏆 Holdings Leaderboard")
+with col_refresh:
+    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        run_subprocess_refresh(
+            "scripts/process_investment_data.py",
+            load_and_preprocess_data.clear,
+            "Fetching latest prices and fundamentals...",
+        )
 
 st.write(
     """
@@ -39,6 +50,11 @@ TOP_N = 25  # how many holdings to show
 # ---------- LOAD DATA ---------- #
 
 data = load_and_preprocess_data()
+
+# Freshness badge
+_stock_info_hl = data.get("stock_info", pd.DataFrame())
+if not _stock_info_hl.empty and "last_updated" in _stock_info_hl.columns:
+    render_freshness_badge(pd.to_datetime(_stock_info_hl["last_updated"]).max(), label="Fundamentals last updated")
 
 # Prefer the enriched stocks_complete if available, otherwise fall back.
 stocks_complete: pd.DataFrame = data.get("stocks_complete")
