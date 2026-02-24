@@ -20,8 +20,16 @@ DAILY_STOCKS_CSV_PATH = DATA_DIR / 'daily_stocks.csv'
 STOCK_INFO_CSV_PATH = DATA_DIR / 'stock_info.csv'
 
 # Delay between individual yfinance API calls (seconds).
-# Yahoo Finance rate-limits aggressively; 0.5s gives ~120 req/min which is safe.
-API_DELAY = 0.5
+# 1.5s ≈ 40 req/min, which stays within Yahoo Finance's rate limits.
+API_DELAY = 1.5
+
+# Fundamentals (sector, PE, target price, etc.) are stable day-to-day.
+# Skip re-fetching any ticker whose stock_info row is younger than this threshold.
+FUNDAMENTALS_STALE_HOURS = 23
+
+# Circuit breaker: if this many consecutive tickers fail in one phase, stop
+# that phase early and report the issue rather than hanging for minutes.
+CIRCUIT_BREAKER_THRESHOLD = 5
 
 # ----------------- HELPER FUNCTIONS ----------------- #
 
@@ -56,7 +64,7 @@ def _replay_transactions(details):
             total_cost += qty * price
             total_quantity += qty
         elif txn["buy_sell"] == "sell":
-            sell_qty = min(qty, max(total_quantity, 0.0))  # never sell more than held
+            sell_qty = min(qty, max(total_quantity, 0.0))
             if total_quantity > 0 and sell_qty > 0:
                 avg_cost_at_sale = total_cost / total_quantity
                 total_cost -= sell_qty * avg_cost_at_sale
@@ -64,21 +72,46 @@ def _replay_transactions(details):
     return total_quantity, total_cost
 
 
+def _check_api_available(test_ticker="MSFT") -> bool:
+    """
+    Quick pre-flight check: try to fetch 2 days of history for one ticker.
+    Returns True if Yahoo Finance is responding, False if rate-limited.
+    Exits fast so we don't waste time grinding through 92 tickers when blocked.
+    """
+    print(f"   Pre-flight: checking Yahoo Finance connectivity ({test_ticker})...")
+    try:
+        hist = yf.Ticker(test_ticker).history(period="2d")
+        if hist.empty:
+            print("   Pre-flight FAILED: got empty response — Yahoo Finance may be rate-limiting.")
+            return False
+        print(f"   Pre-flight OK: {test_ticker} @ ${hist['Close'].iloc[-1]:.2f}")
+        return True
+    except Exception as e:
+        print(f"   Pre-flight FAILED: {e}")
+        return False
+
+
 def _safe_ticker_info(ticker: str, retries: int = 2) -> dict:
     """
-    Fetch yf.Ticker(ticker).info with retries on JSONDecodeError / empty-body errors.
-    Yahoo Finance sometimes returns an empty response (line 1 column 1); a short
-    back-off and retry recovers most of the time.
-    Returns {} on total failure so callers can fall back gracefully.
+    Fetch yf.Ticker(ticker).info with retries on JSONDecodeError and 429 rate limits.
+    Uses short backoff (2s / 4s) — enough for transient errors but won't cause
+    multi-hour hangs when Yahoo Finance has fully blocked the session.
+    Returns {} on total failure so callers can fall back to cached data.
     """
     for attempt in range(retries + 1):
         try:
             return yf.Ticker(ticker).info
         except Exception as e:
-            is_decode = isinstance(e, (ValueError, json.JSONDecodeError)) or "json" in str(e).lower()
-            if is_decode and attempt < retries:
-                wait = API_DELAY * (2 ** (attempt + 1))
-                print(f"     [{ticker}] JSON decode error — retrying in {wait:.1f}s "
+            err = str(e).lower()
+            is_transient = (
+                "429" in err
+                or "too many" in err
+                or "json" in err
+                or isinstance(e, (ValueError, json.JSONDecodeError))
+            )
+            if is_transient and attempt < retries:
+                wait = 2.0 * (2 ** attempt)   # 2s → 4s
+                print(f"     [{ticker}] rate limited — waiting {wait:.0f}s "
                       f"(attempt {attempt + 1}/{retries})...")
                 time.sleep(wait)
             else:
@@ -87,176 +120,68 @@ def _safe_ticker_info(ticker: str, retries: int = 2) -> dict:
     return {}
 
 
-def _batch_fetch_prices(tickers):
-    """
-    Fetch latest close prices for a list of tickers in a single yf.download() call.
-    Returns a dict: {ticker: price}.  Missing tickers default to 0.
-    """
-    prices = {t: 0.0 for t in tickers}
-    if not tickers:
-        return prices
-    try:
-        raw = yf.download(tickers, period="5d", progress=False, auto_adjust=True)
-        if raw.empty:
-            return prices
-        close = raw["Close"] if "Close" in raw.columns else pd.DataFrame()
-        if isinstance(close, pd.Series):
-            # Single ticker came back as a Series
-            val = close.dropna()
-            if not val.empty and len(tickers) == 1:
-                prices[tickers[0]] = float(val.iloc[-1])
-        elif isinstance(close, pd.DataFrame):
-            for ticker in tickers:
-                if ticker in close.columns:
-                    series = close[ticker].dropna()
-                    if not series.empty:
-                        prices[ticker] = float(series.iloc[-1])
-    except Exception as e:
-        print(f"     Batch price fetch failed ({e}). Individual fallbacks will be used.")
-    return prices
-
-
 # ----------------- CORE LOGIC ----------------- #
-
-def build_summary_dataframe(stock_dictionary):
-    """
-    Phase 1 (no API): Replay all transactions to identify active positions.
-    Phase 2 (single batch call): Fetch live prices for active tickers only.
-    Phase 3 (rate-limited loop): Fetch lightweight metadata (52wk, pct_change).
-    """
-    print("   > Building Current Holdings Snapshot...")
-
-    # --- Phase 1: Transaction replay (zero API calls) ---
-    active_positions = {}
-    for ticker, details in stock_dictionary.items():
-        total_quantity, total_cost = _replay_transactions(details)
-        if total_quantity > 0.001:
-            active_positions[ticker] = {
-                "total_quantity": total_quantity,
-                "total_cost": total_cost,
-                "company_name": details.get("stock_name", ticker),
-            }
-
-    if not active_positions:
-        print("     No active positions found.")
-        return pd.DataFrame()
-
-    active_tickers = list(active_positions.keys())
-    print(f"     Active positions found: {len(active_tickers)} tickers "
-          f"({len(stock_dictionary) - len(active_tickers)} sold/inactive skipped)")
-
-    # --- Phase 2: Batch live price fetch (one API call for all active tickers) ---
-    print("     Fetching live prices (batch)...")
-    live_prices = _batch_fetch_prices(active_tickers)
-
-    # --- Phase 3: Per-ticker metadata with rate-limit-safe delays ---
-    stock_data = []
-    for ticker in active_tickers:
-        pos = active_positions[ticker]
-        total_quantity = pos["total_quantity"]
-        total_cost = pos["total_cost"]
-        company_name = pos["company_name"]
-        current_price = live_prices.get(ticker, 0)
-
-        high_52 = 0.0
-        low_52 = 0.0
-        pct_change = 0.0
-
-        try:
-            time.sleep(API_DELAY)
-            stock = yf.Ticker(ticker)
-
-            # If batch price failed for this ticker, get it individually
-            if current_price == 0:
-                try:
-                    current_price = stock.fast_info.get("last_price", 0) or 0
-                except Exception:
-                    current_price = _safe_ticker_info(ticker).get("currentPrice", 0) or 0
-
-            # Use fast_info for 52wk data (lightweight, avoids quoteSummary endpoint)
-            try:
-                fi = stock.fast_info
-                high_52 = getattr(fi, "year_high", None) or 0
-                low_52 = getattr(fi, "year_low", None) or 0
-            except Exception:
-                pass
-
-            # pct_change needs full info — grab only what's needed
-            try:
-                full_info = _safe_ticker_info(ticker)
-                company_name = full_info.get("longName", company_name)
-                pct_change = (full_info.get("52WeekChange", 0) or 0) * 100
-            except Exception:
-                pass
-
-        except Exception as e:
-            print(f"     Metadata fetch failed for {ticker}: {e}")
-
-        avg_cost = total_cost / total_quantity if total_quantity > 0 else 0
-        market_value = total_quantity * current_price
-        equity_change = market_value - total_cost
-
-        stock_data.append([
-            ticker, company_name, current_price, total_quantity, avg_cost,
-            market_value, pct_change, equity_change, high_52, low_52, "Stock"
-        ])
-
-    cols = ["Stock", "Company", "Price", "Quantity", "Avg_Cost", "Market_Value",
-            "Percent_Change", "Equity_Change", "52_Week_High", "52_Week_Low", "Asset_Type"]
-
-    df = pd.DataFrame(stock_data, columns=cols)
-
-    if not df.empty:
-        total_mv = df["Market_Value"].sum()
-        df["Portfolio_Diversity"] = round(df["Market_Value"] * 100 / total_mv, 2) if total_mv > 0 else 0
-        df["Direction"] = np.where(df["Percent_Change"] > 0, 'Up', 'Down')
-        for c in ["Price", "Quantity", "Avg_Cost", "Market_Value", "Equity_Change", "52_Week_High", "52_Week_Low"]:
-            df[c] = df[c].round(2)
-        return df.sort_values(by="Market_Value", ascending=False)
-
-    return pd.DataFrame(columns=cols)
-
 
 def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
     """
-    Updates historical timeline incrementally.
+    Fetches price history for every ticker and replays transactions to produce
+    per-day holdings, cost basis, market value, and profit rows.
+
+    This is the primary data-fetching phase. Prices for stocks.csv are derived
+    from the latest rows here rather than making a separate round of API calls.
+
+    Incremental mode resumes from the last date already on disk; full refresh
+    starts from 2016-01-01. A circuit breaker stops the fetch early if Yahoo
+    Finance appears to be rate-limiting the entire session.
     """
     print(f"   > Updating Historical Daily Data (Mode: {'FULL' if full_refresh else 'INCREMENTAL'})...")
 
     existing_df = pd.DataFrame()
-    start_date = "2016-01-01"  # Default start for full refresh
+    start_date = "2016-01-01"
 
-    # 1. Load Existing Data
     if not full_refresh and csv_path.exists():
         try:
             existing_df = pd.read_csv(csv_path)
             if not existing_df.empty and "Date" in existing_df.columns:
                 existing_df["Date"] = pd.to_datetime(existing_df["Date"])
-                # Purge any corrupt negative-shares rows from previous script versions
                 if "Shares_Held" in existing_df.columns:
                     existing_df = existing_df[existing_df["Shares_Held"] > 0]
                 last_date = existing_df["Date"].max()
                 start_date = last_date.strftime("%Y-%m-%d")
-                print(f"     Found existing data. Fetching new data from {start_date}...")
+                print(f"     Existing data found. Fetching from {start_date} onward...")
         except Exception as e:
-            print(f"     Error reading existing history ({e}). Switching to full refresh.")
+            print(f"     Error reading existing history ({e}). Falling back to full refresh.")
             existing_df = pd.DataFrame()
 
     new_rows = []
+    succeeded = 0
+    failed_tickers = []
+    consecutive_failures = 0
 
     for ticker, details in stock_dictionary.items():
+        if consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            remaining = list(stock_dictionary.keys())
+            idx = remaining.index(ticker) if ticker in remaining else 0
+            skipped = remaining[idx:]
+            print(f"     Circuit breaker: {CIRCUIT_BREAKER_THRESHOLD} consecutive failures. "
+                  f"Stopping history fetch early. Skipped: {skipped}")
+            break
+
         try:
             time.sleep(API_DELAY)
-            stock = yf.Ticker(ticker)
-            hist = stock.history(start=start_date)
+            hist = yf.Ticker(ticker).history(start=start_date)
 
             if hist.empty:
+                print(f"     [{ticker}] no price history returned")
+                failed_tickers.append(ticker)
+                consecutive_failures += 1
                 continue
+
+            consecutive_failures = 0  # reset on success
 
             hist.reset_index(inplace=True)
             hist["Date"] = hist["Date"].dt.tz_localize(None)
 
-            # Transaction Replay Logic
             txns = []
             for t in details["purchase_history"]:
                 d_str = t["date"]
@@ -309,16 +234,23 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
                     })
 
             new_rows.extend(stock_rows)
+            succeeded += 1
 
         except Exception as e:
-            print(f"Error processing history for {ticker}: {e}")
+            print(f"     [{ticker}] history fetch error: {e}")
+            failed_tickers.append(ticker)
+            consecutive_failures += 1
+
+    total = len(stock_dictionary)
+    print(f"     History: {succeeded}/{total} tickers OK"
+          + (f" | Failed: {failed_tickers}" if failed_tickers else ""))
 
     new_df = pd.DataFrame(new_rows)
 
     if not existing_df.empty:
         if new_df.empty:
+            print("     No new rows — returning existing data unchanged.")
             return existing_df
-
         combined = pd.concat([existing_df, new_df], ignore_index=True)
         combined = combined.drop_duplicates(subset=["Date", "Stock"], keep="last")
         combined = combined[combined["Shares_Held"] > 0]
@@ -334,10 +266,152 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
         return new_df
 
 
+def build_summary_dataframe(stock_dictionary, daily_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Builds the current-holdings snapshot (stocks.csv) by:
+      1. Replaying transactions to find active positions (no API calls).
+      2. Reading the most recent price from daily_df (the just-updated history)
+         rather than making a separate round of price API calls.
+      3. Fetching 52-week range and pct_change from fast_info / _safe_ticker_info
+         with a circuit breaker.
+
+    Deriving prices from daily_df eliminates the separate batch-download phase
+    that previously caused session-level rate limit failures.
+    """
+    print("   > Building Current Holdings Snapshot...")
+
+    # Phase 1: transaction replay
+    active_positions = {}
+    for ticker, details in stock_dictionary.items():
+        total_quantity, total_cost = _replay_transactions(details)
+        if total_quantity > 0.001:
+            active_positions[ticker] = {
+                "total_quantity": total_quantity,
+                "total_cost": total_cost,
+                "company_name": details.get("stock_name", ticker),
+            }
+
+    if not active_positions:
+        print("     No active positions found.")
+        return pd.DataFrame()
+
+    active_tickers = list(active_positions.keys())
+    print(f"     Active positions: {len(active_tickers)} tickers "
+          f"({len(stock_dictionary) - len(active_tickers)} sold/inactive skipped)")
+
+    # Phase 2: derive latest price from daily_df (zero extra API calls)
+    latest_prices = {}
+    if not daily_df.empty and "Stock" in daily_df.columns and "Close" in daily_df.columns:
+        daily_df_copy = daily_df.copy()
+        daily_df_copy["Date"] = pd.to_datetime(daily_df_copy["Date"])
+        latest = (
+            daily_df_copy.sort_values("Date")
+            .groupby("Stock")
+            .last()
+            .reset_index()[["Stock", "Close"]]
+        )
+        latest_prices = dict(zip(latest["Stock"], latest["Close"]))
+        found = sum(1 for t in active_tickers if latest_prices.get(t, 0) > 0)
+        print(f"     Prices sourced from history: {found}/{len(active_tickers)}")
+
+    # Phase 3: per-ticker metadata (52wk range, pct_change)
+    print(f"     Fetching metadata for {len(active_tickers)} tickers...")
+    stock_data = []
+    consecutive_failures = 0
+
+    for ticker in active_tickers:
+        if consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            print(f"     Circuit breaker: stopping metadata fetch after "
+                  f"{CIRCUIT_BREAKER_THRESHOLD} consecutive failures.")
+            # Fill remaining tickers with zeros
+            for remaining in active_tickers[active_tickers.index(ticker):]:
+                pos = active_positions[remaining]
+                tq = pos["total_quantity"]
+                tc = pos["total_cost"]
+                cp = float(latest_prices.get(remaining, 0))
+                stock_data.append([
+                    remaining, pos["company_name"], cp, tq,
+                    tc / tq if tq > 0 else 0,
+                    tq * cp, 0.0, tq * cp - tc, 0.0, 0.0, "Stock"
+                ])
+            break
+
+        pos = active_positions[ticker]
+        total_quantity = pos["total_quantity"]
+        total_cost = pos["total_cost"]
+        company_name = pos["company_name"]
+        current_price = float(latest_prices.get(ticker, 0))
+
+        high_52 = 0.0
+        low_52 = 0.0
+        pct_change = 0.0
+
+        try:
+            time.sleep(API_DELAY)
+            stock = yf.Ticker(ticker)
+
+            # 52wk range via fast_info
+            try:
+                fi = stock.fast_info
+                high_52 = getattr(fi, "year_high", None) or 0
+                low_52 = getattr(fi, "year_low", None) or 0
+                # Use fast_info price only if history gave us nothing
+                if current_price == 0:
+                    current_price = float(
+                        getattr(fi, "last_price", None) or
+                        getattr(fi, "previous_close", None) or 0
+                    )
+            except Exception:
+                pass
+
+            # Company name and pct_change from full info
+            try:
+                info = _safe_ticker_info(ticker)
+                company_name = info.get("longName", company_name)
+                pct_change = (info.get("52WeekChange", 0) or 0) * 100
+            except Exception:
+                pass
+
+            consecutive_failures = 0
+
+        except Exception as e:
+            print(f"     [{ticker}] metadata fetch failed: {e}")
+            consecutive_failures += 1
+
+        avg_cost = total_cost / total_quantity if total_quantity > 0 else 0
+        market_value = total_quantity * current_price
+        equity_change = market_value - total_cost
+
+        stock_data.append([
+            ticker, company_name, current_price, total_quantity, avg_cost,
+            market_value, pct_change, equity_change, high_52, low_52, "Stock"
+        ])
+
+    cols = ["Stock", "Company", "Price", "Quantity", "Avg_Cost", "Market_Value",
+            "Percent_Change", "Equity_Change", "52_Week_High", "52_Week_Low", "Asset_Type"]
+
+    df = pd.DataFrame(stock_data, columns=cols)
+
+    if not df.empty:
+        total_mv = df["Market_Value"].sum()
+        df["Portfolio_Diversity"] = round(df["Market_Value"] * 100 / total_mv, 2) if total_mv > 0 else 0
+        df["Direction"] = np.where(df["Percent_Change"] > 0, 'Up', 'Down')
+        for c in ["Price", "Quantity", "Avg_Cost", "Market_Value", "Equity_Change", "52_Week_High", "52_Week_Low"]:
+            df[c] = df[c].round(2)
+        return df.sort_values(by="Market_Value", ascending=False)
+
+    return pd.DataFrame(columns=cols)
+
+
 def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
     """
-    Updates fundamentals. Fetches data for all tickers (owned + watchlist).
-    Preserves existing data for any ticker whose fetch fails.
+    Fetches fundamentals (sector, PE, target price, etc.) for all tickers.
+
+    Incremental mode skips any ticker whose Last Updated is within
+    FUNDAMENTALS_STALE_HOURS — fundamentals don't change daily, so re-fetching
+    them on every run is the primary driver of 429 rate limits.
+    Falls back to existing data for any ticker whose fetch fails.
+    A circuit breaker stops early if the entire session appears rate-limited.
     """
     print("   > Updating Fundamentals...")
 
@@ -349,17 +423,67 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
             pass
 
     tickers_to_fetch = list(stock_dict.keys())
+    fresh_tickers = set()
+
+    # Skip tickers with fresh fundamentals in incremental mode
+    if not full_refresh and not existing_df.empty and "Last Updated" in existing_df.columns:
+        try:
+            now = pd.Timestamp.now()
+            ages_h = (
+                (now - pd.to_datetime(existing_df["Last Updated"], errors="coerce"))
+                .dt.total_seconds() / 3600
+            )
+            fresh_tickers = set(existing_df.loc[ages_h < FUNDAMENTALS_STALE_HOURS, "Stock"].tolist())
+            tickers_to_fetch = [t for t in tickers_to_fetch if t not in fresh_tickers]
+            if fresh_tickers:
+                print(f"     Skipping {len(fresh_tickers)} tickers with fresh fundamentals "
+                      f"(<{FUNDAMENTALS_STALE_HOURS}h old). Fetching {len(tickers_to_fetch)} stale...")
+        except Exception as e:
+            print(f"     Staleness check failed ({e}); fetching all tickers.")
+
+    if not tickers_to_fetch:
+        print("     All fundamentals are up to date — nothing to fetch.")
+        return existing_df
+
     data_list = []
+    succeeded = 0
+    failed_tickers = []
+    consecutive_failures = 0
 
     for ticker in tickers_to_fetch:
+        if consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            remaining = tickers_to_fetch[tickers_to_fetch.index(ticker):]
+            print(f"     Circuit breaker: stopping fundamentals fetch after "
+                  f"{CIRCUIT_BREAKER_THRESHOLD} consecutive failures. "
+                  f"Preserving existing data for {len(remaining)} remaining tickers.")
+            # Preserve existing rows for skipped tickers
+            if not existing_df.empty and "Stock" in existing_df.columns:
+                for t in remaining:
+                    match = existing_df[existing_df["Stock"] == t]
+                    if not match.empty:
+                        data_list.append(match.iloc[0].to_dict())
+            break
+
         try:
             time.sleep(API_DELAY)
             info = _safe_ticker_info(ticker)
             if not info:
-                raise ValueError(f"Empty info returned for {ticker} after retries")
+                raise ValueError(f"Empty info for {ticker}")
 
             def get(key, default=0):
                 return info.get(key, default)
+
+            # Current price from fast_info (lighter endpoint than quoteSummary)
+            price = 0
+            try:
+                fi = yf.Ticker(ticker).fast_info
+                price = float(
+                    getattr(fi, "last_price", None) or
+                    getattr(fi, "previous_close", None) or
+                    get("currentPrice", 0)
+                )
+            except Exception:
+                price = float(get("currentPrice", 0))
 
             row = {
                 "Stock": ticker,
@@ -384,31 +508,41 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
                 "Compensation Risk": get("compensationRisk", 5),
                 "Shareholder Rights Risk": get("shareHolderRightsRisk", 5),
                 "Overall Risk": get("overallRisk", 5),
+                "Price": price,
             }
 
-            # Also store the current price so Buying Opportunities page can use it
-            try:
-                row["Price"] = stock.fast_info.get("last_price", 0) or get("currentPrice", 0)
-            except Exception:
-                row["Price"] = get("currentPrice", 0)
-
             data_list.append(row)
+            succeeded += 1
+            consecutive_failures = 0
 
         except Exception as e:
-            print(f"Failed to fetch info for {ticker}: {e}")
-            # Fall back to existing data so we don't lose it
-            if not existing_df.empty and ticker in existing_df.get("Stock", pd.Series()).values:
-                old_row = existing_df[existing_df["Stock"] == ticker].iloc[0].to_dict()
-                data_list.append(old_row)
+            print(f"     [{ticker}] fundamentals fetch failed: {e}")
+            failed_tickers.append(ticker)
+            consecutive_failures += 1
+            # Preserve existing row
+            if not existing_df.empty and "Stock" in existing_df.columns:
+                match = existing_df[existing_df["Stock"] == ticker]
+                if not match.empty:
+                    data_list.append(match.iloc[0].to_dict())
 
-    return pd.DataFrame(data_list)
+    print(f"     Fundamentals: {succeeded}/{len(tickers_to_fetch)} fetched"
+          + (f" | Failed: {failed_tickers}" if failed_tickers else "")
+          + (f" | {len(fresh_tickers)} skipped (fresh)" if fresh_tickers else ""))
+
+    new_df = pd.DataFrame(data_list)
+    if not existing_df.empty and fresh_tickers:
+        fresh_rows = existing_df[existing_df["Stock"].isin(fresh_tickers)]
+        new_df = pd.concat([new_df, fresh_rows], ignore_index=True)
+        new_df = new_df.drop_duplicates(subset=["Stock"], keep="first")
+
+    return new_df
 
 
 # ----------------- MAIN ----------------- #
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--full', action='store_true', help="Force full refresh")
+    parser.add_argument('--full', action='store_true', help="Force full refresh of all data")
     args = parser.parse_args()
 
     print("--- INVESTMENT DATA UPDATE STARTED ---")
@@ -418,16 +552,15 @@ if __name__ == "__main__":
         sys.exit(1)
 
     stock_dict = load_stock_dictionary(STOCK_DICT_PATH)
+    print(f"   Loaded {len(stock_dict)} tickers from stock_dictionary.json")
 
-    # 1. Stocks (Snapshot — only active positions)
-    stocks_df = build_summary_dataframe(stock_dict)
-    if not stocks_df.empty:
-        stocks_df.to_csv(STOCKS_CSV_PATH, index=False)
-        print(f"   > Saved stocks.csv ({len(stocks_df)} rows)")
-    else:
-        print("   > Warning: stocks.csv empty. Skipping save to preserve data.")
+    # Pre-flight: verify Yahoo Finance is accessible before grinding through 92 tickers
+    if not _check_api_available():
+        print("\nYahoo Finance is rate-limiting this session.")
+        print("Wait 15–30 minutes and try again. Existing CSV data has been preserved.")
+        sys.exit(1)
 
-    # 2. Daily History (Incremental)
+    # 1. Daily history — primary data fetch; prices for snapshot are derived from this
     daily_df = create_daily_stock_table(stock_dict, DAILY_STOCKS_CSV_PATH, args.full)
     if not daily_df.empty:
         daily_df.to_csv(DAILY_STOCKS_CSV_PATH, index=False)
@@ -435,7 +568,15 @@ if __name__ == "__main__":
     else:
         print("   > Warning: daily_stocks.csv result empty. Skipping save.")
 
-    # 3. Info (Fundamentals)
+    # 2. Holdings snapshot — prices come from daily_df, no extra API round
+    stocks_df = build_summary_dataframe(stock_dict, daily_df)
+    if not stocks_df.empty:
+        stocks_df.to_csv(STOCKS_CSV_PATH, index=False)
+        print(f"   > Saved stocks.csv ({len(stocks_df)} rows)")
+    else:
+        print("   > Warning: stocks.csv result empty. Skipping save.")
+
+    # 3. Fundamentals — skips fresh tickers; circuit-breaker stops early if rate-limited
     info_df = create_stock_info_table(stock_dict, STOCK_INFO_CSV_PATH, args.full)
     if not info_df.empty:
         info_df.to_csv(STOCK_INFO_CSV_PATH, index=False)
