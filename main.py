@@ -6,6 +6,13 @@ import streamlit as st
 import altair as alt
 
 from scripts.data_processing import load_and_preprocess_data
+from scripts.navigation import make_sidebar
+from scripts.utils import (
+    calculate_average_monthly_total,
+    calculate_yearly_total,
+    get_last_refresh_date_from_df,
+    get_portfolio_snapshot
+)
 
 # ----------------- PAGE CONFIG ----------------- #
 
@@ -15,8 +22,11 @@ st.set_page_config(
     layout="wide",
 )
 
-# ----------------- LIGHT CUSTOM STYLING ----------------- #
+# ----------------- INJECT SIDEBAR ----------------- #
+# This renders the centralized navigation
+make_sidebar("Home")
 
+# ----------------- CUSTOM STYLING ----------------- #
 st.markdown(
     """
     <style>
@@ -82,230 +92,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ----------------- SIDEBAR NAVIGATION ----------------- #
+# ----------------- HOME PAGE LOGIC ----------------- #
 
-st.sidebar.title("Navigation")
-
-# NOTE: For st.switch_page, these strings should match your actual app paths.
-# Adjust if your multipage structure is different.
-pages: Dict[str, str] = {
-    "Home": "main.py",
-    # Budget pages
-    "Budget Overview": "views/Budget_Overview.py",
-    "Income Analysis": "views/Income.py",
-    "Expense Breakdown": "views/Expenses.py",
-    # Investment pages
-    "Portfolio Overview": "views/Portfolio_Overview.py",
-    "Industry & Sector Breakdown": "views/Industry_&_Sector_Breakdown.py",
-    "Company Deep-Dive": "views/Company_Deep-Dive.py",
-    "Buying Opportunities": "views/Buying_Opportunities.py",
-    "Stock Peer Analysis": "views/Stock_Peer_Analysis.py",
-    "Holdings Leaderboard": "views/Holdings_Leaderboard.py"
-}
-
-st.sidebar.subheader("🏠 Home")
-home_page = st.sidebar.radio(
-    "Go to Home:",
-    options=["Home"],
-    index=0,
-    label_visibility="collapsed",
-)
-
-st.sidebar.subheader("📊 Budget Pages")
-budget_page = st.sidebar.radio(
-    "Go to Budget Page:",
-    options=["Budget Overview",
-             "Income Analysis",
-             "Expense Breakdown"],
-    index=0,
-    label_visibility="collapsed",
-)
-
-st.sidebar.subheader("📈 Investment Pages")
-investment_page = st.sidebar.radio(
-    "Go to Investment Page:",
-    options=[
-        "Portfolio Overview",
-        "Industry & Sector Breakdown",
-        "Company Deep-Dive",
-        "Buying Opportunities",
-        "Peer Analysis",
-        "Holdings Leaderboard"
-    ],
-    index=0,
-    label_visibility="collapsed",
-)
-
-# Decide which page is selected
-if home_page == "Home":
-    selected_page = "Home"
-elif budget_page:
-    selected_page = budget_page
-else:
-    selected_page = investment_page
-
-
-def handle_navigation(page_key: str):
-    """Use Streamlit's multipage navigation to switch pages."""
-    if page_key == "Home":
-        return
-    page_file = pages.get(page_key)
-    if not page_file:
-        return
-    try:
-        st.switch_page(page_file)
-    except Exception:
-        # If user is on older Streamlit or paths don't match,
-        # we fail silently and stay on Home rather than crashing.
-        st.warning(
-            "Sidebar navigation requires Streamlit's multipage setup. "
-            "Check that your page paths in `pages` match your actual files."
-        )
-
-
-# If not on Home, navigate away and stop executing this page
-if selected_page != "Home":
-    handle_navigation(selected_page)
-    st.stop()
-
-# ----------------- HELPER FUNCTIONS ----------------- #
-
-def get_last_refresh_date_from_df(df: pd.DataFrame, date_col: str = "date") -> str:
-    """
-    Get the most recent date from a dataframe date column.
-    Assumes the column is a date-like string or datetime.
-    """
-    try:
-        if date_col not in df.columns:
-            return f"Column '{date_col}' not found"
-        dates = pd.to_datetime(df[date_col], errors="coerce")
-        if dates.isna().all():
-            return "No valid dates"
-        last_date = dates.max()
-        return last_date.strftime("%Y-%m-%d")
-    except Exception as e:
-        return f"Error: {e}"
-
-
-def _coerce_amount_numeric(df: pd.DataFrame, amount_col: str = "amount") -> pd.DataFrame:
-    """
-    Force the amount column to numeric, handling strings like '$2,550.83', '1,234', '(123.45)'.
-    """
-    if amount_col not in df.columns:
-        raise KeyError(f"Required column '{amount_col}' not found")
-
-    df = df.copy()
-    s = df[amount_col].astype(str)
-
-    # Remove $ and commas
-    s = s.str.replace(r"[,\$]", "", regex=True)
-    # Convert '(123.45)' -> '-123.45'
-    s = s.str.replace(r"^\((.*)\)$", r"-\1", regex=True)
-
-    df[amount_col] = pd.to_numeric(s, errors="coerce")
-    return df
-
-
-def calculate_average_monthly_total(
-    df: pd.DataFrame,
-    date_col: str = "date",
-    amount_col: str = "amount",
-) -> float:
-    """
-    Generic helper to calculate average monthly total (income/expenses)
-    for the current year from a dataframe.
-    """
-    try:
-        if date_col not in df.columns:
-            raise KeyError(f"Required column '{date_col}' not found")
-
-        df = _coerce_amount_numeric(df, amount_col=amount_col)
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-
-        current_year = pd.Timestamp.now().year
-        df_year = df[df[date_col].dt.year == current_year]
-
-        if df_year.empty:
-            return 0.0
-
-        monthly_totals = (
-            df_year
-            .groupby(df_year[date_col].dt.to_period("M"))[amount_col]
-            .sum()
-        )
-
-        return float(monthly_totals.mean())
-    except Exception as e:
-        st.error(f"Error calculating average monthly total: {e}")
-        return 0.0
-
-
-def calculate_yearly_total(
-    df: pd.DataFrame,
-    date_col: str = "date",
-    amount_col: str = "amount",
-) -> float:
-    """
-    Calculate the total for the current year (e.g., annual income or expenses).
-    """
-    try:
-        if date_col not in df.columns:
-            raise KeyError(f"Required column '{date_col}' not found")
-
-        df = _coerce_amount_numeric(df, amount_col=amount_col)
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-
-        current_year = pd.Timestamp.now().year
-        df_year = df[df[date_col].dt.year == current_year]
-
-        return float(df_year[amount_col].sum())
-    except Exception as e:
-        st.error(f"Error calculating yearly total: {e}")
-        return 0.0
-
-
-def get_portfolio_snapshot(data: Dict[str, Any]) -> Dict[str, float]:
-    """
-    Derive investment snapshot metrics from preprocessed data.
-
-    Uses the `daily_equity` table for portfolio-level numbers.
-    """
-    daily_equity: pd.DataFrame = data.get("daily_equity", pd.DataFrame())
-
-    if daily_equity.empty or "date" not in daily_equity.columns:
-        return {
-            "total_portfolio_value": 0.0,
-            "total_equity": 0.0,
-            "total_profit": 0.0,
-        }
-
-    df = daily_equity.copy()
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.sort_values("date")
-
-    latest = df.iloc[-1]
-
-    total_portfolio_value = float(latest.get("market_value", 0.0))
-    total_equity = float(latest.get("equity", 0.0))
-    total_profit = float(latest.get("total_profit", 0.0))
-
-    return {
-        "total_portfolio_value": total_portfolio_value,
-        "total_equity": total_equity,
-        "total_profit": total_profit,
-    }
-
-
-# ----------------- HOME PAGE (LANDING) ----------------- #
-
-# Load data once
+# Load data safely (returns empty DFs if files missing)
 data: Dict[str, Any] = load_and_preprocess_data()
-income_df: pd.DataFrame = data["income"]
-expenses_df: pd.DataFrame = data["expenses"]
-daily_stocks_df: pd.DataFrame = data["daily_stocks"]
+
+income_df: pd.DataFrame = data.get("income", pd.DataFrame())
+expenses_df: pd.DataFrame = data.get("expenses", pd.DataFrame())
+daily_stocks_df: pd.DataFrame = data.get("daily_stocks", pd.DataFrame())
 daily_equity_df: pd.DataFrame = data.get("daily_equity", pd.DataFrame())
 
-# Budget metrics
+# Check for empty state to guide the user
+if income_df.empty and expenses_df.empty and daily_stocks_df.empty:
+    st.warning(
+        """
+        ⚠️ **No data found.**
+
+        It looks like your data files are missing or empty. 
+        Please ensure your `Budget.xlsx` and `stock_dictionary.json` are in the `data/` folder, 
+        then click the **Refresh** buttons below to process them.
+        """
+    )
+
+# Calculate Budget Metrics
 avg_monthly_income = calculate_average_monthly_total(income_df)
 avg_monthly_expenses = calculate_average_monthly_total(expenses_df)
 annual_income = calculate_yearly_total(income_df)
@@ -318,14 +127,14 @@ else:
 
 last_expenses_refresh = get_last_refresh_date_from_df(expenses_df, "date")
 
-# Investment metrics
+# Calculate Investment Metrics
 portfolio_snapshot = get_portfolio_snapshot(data)
 total_portfolio_value = portfolio_snapshot["total_portfolio_value"]
 total_equity = portfolio_snapshot["total_equity"]
 total_profit = portfolio_snapshot["total_profit"]
 last_investment_refresh = get_last_refresh_date_from_df(daily_stocks_df, "date")
 
-# ----------------- HERO SECTION (FULL WIDTH) ----------------- #
+# ----------------- HERO SECTION ----------------- #
 st.markdown(
     """
     <div class="hero-container">
@@ -390,16 +199,17 @@ with left:
     )
 
     if st.button("🔄 Refresh Budget Data"):
-        try:
-            subprocess.run(
-                ["python", "scripts/process_budget_data.py"],
-                check=True,
-            )
-            load_and_preprocess_data.clear()
-            st.success("Budget data updated. Reloading with fresh data...")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to update budget data: {e}")
+        with st.spinner("Processing Budget.xlsx..."):
+            try:
+                subprocess.run(
+                    ["python", "scripts/process_budget_data.py"],
+                    check=True,
+                )
+                load_and_preprocess_data.clear()
+                st.success("Budget data updated! Reloading...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to update budget data: {e}")
 
 # ----- Investments Overview Column ----- #
 with right:
@@ -421,22 +231,24 @@ with right:
         # Use delta to color profit/loss green/red
         pl_delta = f"${total_profit:,.2f}" if total_profit != 0 else None
         st.metric("Total Profit / Loss", f"${total_profit:,.2f}", delta=pl_delta)
+
     st.markdown(
         f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>",
         unsafe_allow_html=True,
     )
 
     if st.button("🔄 Refresh Investment Data"):
-        try:
-            subprocess.run(
-                ["python", "scripts/process_investment_data.py"],
-                check=True,
-            )
-            load_and_preprocess_data.clear()
-            st.success("Investment data updated. Reloading with fresh data...")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to update investment data: {e}")
+        with st.spinner("Fetching market data (Incremental)..."):
+            try:
+                subprocess.run(
+                    ["python", "scripts/process_investment_data.py"],
+                    check=True,
+                )
+                load_and_preprocess_data.clear()
+                st.success("Investment data updated! Reloading...")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to update investment data: {e}")
 
 # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
 st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
@@ -444,13 +256,13 @@ st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', u
 if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
     chart_df = daily_equity_df.copy()
     chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
-    chart_df = chart_df.sort_values("date")
+    chart_df = chart_df.dropna(subset=["date"]).sort_values("date")
 
     # Altair chart with month-year x-axis and profit in tooltip, color by profit sign
     chart = (
         alt.Chart(chart_df)
-        .mark_line(point=True)
-        .encode(
+            .mark_line(point=True)
+            .encode(
             x=alt.X(
                 "date:T",
                 axis=alt.Axis(format="%b %y", title="Date"),
@@ -467,7 +279,7 @@ if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubs
                 alt.Tooltip("total_profit:Q", title="Total Profit", format=",.2f"),
             ],
         )
-        .properties(height=300)
+            .properties(height=300)
     )
 
     st.altair_chart(chart, use_container_width=True)
