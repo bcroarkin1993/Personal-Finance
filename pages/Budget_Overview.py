@@ -4,6 +4,7 @@ import altair as alt
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import BLUE, GREEN, RED, page_header
 from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -12,11 +13,10 @@ st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide"
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Budget Overview")
 
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("💸 Budget Overview")
+page_header("Budget Overview", icon="💸",
+            subtitle="Monthly budget vs. actual spending across all categories")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_budget_data.py",
@@ -146,7 +146,7 @@ if not chart_data.empty:
             .encode(
             x=alt.X("date:T", axis=alt.Axis(format="%b %Y", title="Date")),
             y=alt.Y("Amount:Q", axis=alt.Axis(title="Amount ($)")),
-            color=alt.Color("Type:N", scale=alt.Scale(domain=["Income", "Expenses"], range=["#2ecc71", "#e74c3c"])),
+            color=alt.Color("Type:N", scale=alt.Scale(domain=["Income", "Expenses"], range=[GREEN, RED])),
             tooltip=[alt.Tooltip("date:T", format="%b %Y"), alt.Tooltip("Type:N"),
                      alt.Tooltip("Amount:Q", format="$,.2f")]
         )
@@ -158,7 +158,7 @@ if not chart_data.empty:
             .encode(
             x="date:T",
             y=alt.Y("Savings_Rate:Q", axis=alt.Axis(title="Savings Rate %", format="%")),
-            color=alt.value("#3498db"),
+            color=alt.value(BLUE),
             tooltip=[alt.Tooltip("date:T", format="%b %Y"),
                      alt.Tooltip("Savings_Rate:Q", title="Savings Rate", format=".1%")]
         )

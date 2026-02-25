@@ -98,13 +98,21 @@ data/*.csv  (all CSVs)
 ### Key Modules
 
 - **`main.py`** — Home page / dashboard. Loads preprocessed data and renders summary metrics and portfolio trend chart.
-- **`scripts/data_processing.py`** — Central data layer. `load_and_preprocess_data()` (cached) reads all CSVs, merges stocks with fundamentals, computes daily equity, sector aggregates, buying opportunity scores, and 14-day RSI (from `daily_stocks.csv` — no API). All pages call this function.
-- **`scripts/process_investment_data.py`** — Standalone script. Replays transaction history from `stock_dictionary.json` to compute current holdings, fetches yfinance for prices and fundamentals, and saves to CSV.
+- **`scripts/data_processing.py`** — Central data layer. `load_and_preprocess_data()` (cached) reads all CSVs, merges stocks with fundamentals, computes daily equity, sector aggregates, and 14-day RSI (from `daily_stocks.csv` — no API). All pages call this function. Buying opportunity scoring is **not** run here — it's deferred to `Buying_Opportunities.py`.
+- **`scripts/process_investment_data.py`** — Standalone script. Replays transaction history from `stock_dictionary.json` to compute current holdings, fetches yfinance for prices and fundamentals (parallelised via `ThreadPoolExecutor(max_workers=3)`), and saves to CSV.
 - **`scripts/process_budget_data.py`** — Standalone script. Parses the Budget Excel workbook (sheets named `Monthly Budget *` and `Budget v Actual`) and saves to CSV.
 - **`scripts/navigation.py`** — Custom sidebar navigation with three radio groups (Home, Budget, Investments). Every page must call `make_sidebar("<PageId>")` as its first UI step.
+- **`scripts/theme.py`** — Shared UI theme module. Exports color constants (`GREEN`, `RED`, `BLUE`, `YELLOW`, `DARK_BG`, `CARD_BORDER`, `BANNER_BG`) and `page_header(title, icon, subtitle, pills)`. Every page calls `page_header()` instead of `st.title()`.
 - **`scripts/utils.py`** — Financial calculation helpers (YTD totals, monthly averages, portfolio snapshot).
 - **`scripts/config.py`** — Reads `config/config.ini` to expose `RUN_MODE` (`testing` or `production`), which controls debug logging in `data_processing.py`.
 - **`pages/`** — One file per Streamlit page; each loads `load_and_preprocess_data()` and calls `make_sidebar()`.
+
+### Chart Library Convention
+
+- **Altair** — time-series line charts (portfolio trend, normalized price performance, peer comparison lines)
+- **Plotly** — all other chart types (bar, pie, treemap, scatter, polar/radar)
+
+Use color constants from `scripts/theme.py` rather than hex literals in chart encoding.
 
 ### `stock_dictionary.json` Schema
 
@@ -192,15 +200,11 @@ Run with: `venv/bin/python -m pytest tests/ -v`
 
 ---
 
-### 6. UI / Theme Consistency (was §5)
+### 6. UI / Theme Consistency (was §5) ✅ *Completed — merged to main*
 
-- [ ] **Create a shared theme module.** Extract a `scripts/theme.py` (or `scripts/styles.py`) that defines the color palette (greens/reds already used: `#2ecc71`, `#e74c3c`, `#3498db`), reusable CSS strings, and a `apply_page_style()` function. Call it from every page instead of repeating inline CSS or leaving pages unstyled.
-
-- [ ] **Standardize chart library per use case.** The app mixes Altair (trend lines) and Plotly (bar/pie) across pages with no consistent rule. Choose one for each chart type and apply it uniformly — or document the rule in this file so future additions are consistent.
-
-- [ ] **Apply hero-section styling to all pages.** `main.py` has a polished hero gradient header with pill labels. Budget and investment pages just use `st.title(...)`. Wrap the `make_sidebar` call in a shared helper that also injects the hero header markup so all pages have a consistent header look.
-
-- [ ] **Add `st.set_page_config` to `Holdings_Leaderboard.py`.** (Overlaps with the bug fix above — resolve together.)
+- [x] **Create a shared theme module.** `scripts/theme.py` exports color constants (`GREEN`, `RED`, `BLUE`, `YELLOW`, `DARK_BG`, `CARD_BORDER`, `BANNER_BG`) and `page_header(title, icon, subtitle, pills)` which injects shared CSS + renders the gradient hero header.
+- [x] **Standardize chart library per use case.** Convention documented above: Altair for time-series, Plotly for all other chart types. Color literals replaced with theme constants across all pages.
+- [x] **Apply hero-section styling to all pages.** All 9 pages (`main.py`, `Budget_Overview.py`, `Expenses.py`, `Income.py`, `Portfolio_Overview.py`, `Industry_&_Sector_Breakdown.py`, `Company_Deep-Dive.py`, `Buying_Opportunities.py`, `Stock_Peer_Analysis.py`, `Holdings_Leaderboard.py`) now call `page_header()` in place of `st.title()`.
 
 ---
 

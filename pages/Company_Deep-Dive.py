@@ -5,6 +5,7 @@ import random  # Added for random selection
 from datetime import datetime, timedelta
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import BLUE, page_header
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -13,11 +14,10 @@ st.set_page_config(page_title="Company Deep Dive", page_icon="🏢", layout="wid
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Company Deep-Dive")
 
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("🏢 Company Deep-Dive")
+page_header("Company Deep-Dive", icon="🏢",
+            subtitle="Detailed financials and analyst data for individual stocks")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",
@@ -140,7 +140,7 @@ with col_chart:
             title=f"{selected_ticker} Stock Price",
         )
         # Add area shading
-        fig.update_traces(fill='tozeroy', line_color='#3498db')
+        fig.update_traces(fill='tozeroy', line_color=BLUE)
         fig.update_layout(xaxis_title=None, yaxis_title="Price ($)")
         st.plotly_chart(fig, use_container_width=True)
     else:

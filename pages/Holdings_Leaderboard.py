@@ -11,17 +11,17 @@ from PIL import Image
 
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import page_header
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 st.set_page_config(page_title="Holdings Leaderboard", page_icon="🏆", layout="wide")
 
 make_sidebar("Holdings Leaderboard")
 
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("🏆 Holdings Leaderboard")
+page_header("Holdings Leaderboard", icon="🏆",
+            subtitle="Top holdings by portfolio value with company logos, market cap, and sector")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",
@@ -30,13 +30,6 @@ with col_refresh:
         )
 
 render_refresh_status()
-
-st.write(
-    """
-    See your top holdings by portfolio value with company logos, market cap, and sector.
-    This gives you a quick, visual sense of what actually drives your portfolio.
-    """
-)
 
 st.divider()
 

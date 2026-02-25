@@ -8,18 +8,16 @@ import streamlit as st
 
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import RED, page_header
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 st.set_page_config(page_title="Stock Peer Analysis", page_icon="📊", layout="wide")
 make_sidebar("Stock Peer Analysis")
 
-# ---------- PAGE HEADER ---------- #
-
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("📊 Stock Peer Analysis")
+page_header("Stock Peer Analysis", icon="📊",
+            subtitle="Compare owned stocks against industry peers")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",
@@ -266,7 +264,7 @@ for i, ticker in enumerate(tickers):
             y=alt.Y("Price:Q", title="Normalized Price").scale(zero=False),
             color=alt.Color(
                 "Series:N",
-                scale=alt.Scale(domain=[ticker, "Peer average"], range=["red", "gray"]),
+                scale=alt.Scale(domain=[ticker, "Peer average"], range=[RED, "gray"]),
                 legend=alt.Legend(orient="bottom"),
             ),
             tooltip=[

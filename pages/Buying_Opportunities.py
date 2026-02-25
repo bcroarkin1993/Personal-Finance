@@ -10,6 +10,7 @@ from scripts.data_processing import (
     clear_all_caches,
 )
 from scripts.navigation import make_sidebar
+from scripts.theme import BANNER_BG, GREEN, RED, YELLOW, page_header
 from scripts.utils import render_refresh_status, run_subprocess_refresh
 
 st.set_page_config(layout="wide", page_title="Buying Opportunities", page_icon="💰")
@@ -31,11 +32,10 @@ if not stock_info.empty and "last_updated" in stock_info.columns:
     except Exception:
         pass
 
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("💰 Buying Opportunities")
+page_header("Buying Opportunities", icon="💰",
+            subtitle="Data-driven scoring engine for re-buying and new positions")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top: 12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",
@@ -43,13 +43,13 @@ with col_refresh:
             "Fetching latest prices and fundamentals...",
         )
 
-freshness_color = "#e74c3c" if last_updated == "Unknown" else (
-    "#f39c12" if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
-    else "#2ecc71"
+freshness_color = RED if last_updated == "Unknown" else (
+    YELLOW if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
+    else GREEN
 )
 st.markdown(
     f"""
-    <div style='background-color:#1e2530; padding:12px 16px; border-radius:10px;
+    <div style='background-color:{BANNER_BG}; padding:12px 16px; border-radius:10px;
                 border-left:5px solid {freshness_color}; margin-bottom:12px;'>
         <b>Fundamentals last refreshed:</b> <span style='color:{freshness_color};'>{last_updated}</span>
         &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -67,8 +67,8 @@ vix = market_ctx.get("vix", 20.0)
 sp_perf = market_ctx.get("sp500_1mo_perf_pct", 0.0)
 sentiment = market_ctx.get("market_sentiment_score", 0.5)
 
-vix_color = "#e74c3c" if vix > 30 else ("#f39c12" if vix > 20 else "#2ecc71")
-sp_color = "#2ecc71" if sp_perf >= 0 else "#e74c3c"
+vix_color = RED if vix > 30 else (YELLOW if vix > 20 else GREEN)
+sp_color = GREEN if sp_perf >= 0 else RED
 sentiment_label = "Fearful (Buy Signal)" if sentiment > 0.6 else ("Neutral" if sentiment > 0.4 else "Greedy (Caution)")
 
 mc1, mc2, mc3 = st.columns(3)
