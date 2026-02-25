@@ -274,7 +274,7 @@ for i, ticker in enumerate(tickers):
                 alt.Tooltip("Price:Q", title="Normalized Price", format=".2f"),
             ],
         )
-        .properties(title=f"{ticker} vs peer average", height=260)
+        .properties(title=alt.TitleParams(text=[ticker, "vs peer average"]), height=260)
     )
 
     row_cols[0].container(border=True).altair_chart(line_chart, use_container_width=True)
