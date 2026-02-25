@@ -457,8 +457,16 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False, daily_df=N
     tickers_to_fetch = list(stock_dict.keys())
     fresh_tickers = set()
 
+    # Schema-migration guard: if new columns are missing, re-fetch everything
+    # regardless of freshness so the new data gets written on the next incremental run.
+    REQUIRED_COLS = {"52 Week High", "52 Week Low", "RSI 14"}
+    schema_outdated = not existing_df.empty and not REQUIRED_COLS.issubset(set(existing_df.columns))
+    if schema_outdated:
+        print(f"     stock_info.csv is missing new columns "
+              f"({REQUIRED_COLS - set(existing_df.columns)}) — re-fetching all tickers.")
+
     # Skip tickers with fresh fundamentals in incremental mode
-    if not full_refresh and not existing_df.empty and "Last Updated" in existing_df.columns:
+    if not full_refresh and not schema_outdated and not existing_df.empty and "Last Updated" in existing_df.columns:
         try:
             now = pd.Timestamp.now()
             ages_h = (
