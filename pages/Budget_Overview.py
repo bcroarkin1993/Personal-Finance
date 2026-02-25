@@ -63,14 +63,14 @@ with st.container():
     f_col1, f_col2 = st.columns(2)
 
     if not income_df.empty and not expenses_df.empty:
-        min_date = min(income_df["date"].min(), expenses_df["date"].min())
-        max_date = max(income_df["date"].max(), expenses_df["date"].max())
+        min_date = min(income_df["date"].min(), expenses_df["date"].min()).date()
+        max_date = max(income_df["date"].max(), expenses_df["date"].max()).date()
     else:
         min_date = date.today()
         max_date = date.today()
 
-    default_start = date(date.today().year, 1, 1)
-    default_end = date.today()
+    default_start = max(min_date, date(date.today().year, 1, 1))
+    default_end = min(max_date, date.today())
 
     with f_col1:
         date_range = st.date_input(

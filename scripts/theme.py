@@ -109,9 +109,9 @@ def apply_base_css() -> None:
     """Inject shared CSS for the hero header, metric cards, section titles, etc.
 
     Safe to call multiple times per page — Streamlit de-duplicates identical
-    markdown injections within a single render.
+    HTML injections within a single render.
     """
-    st.markdown(_BASE_CSS, unsafe_allow_html=True)
+    st.html(_BASE_CSS)
 
 
 def page_header(
@@ -148,13 +148,12 @@ def page_header(
         f"<div class='hero-subtitle'>{subtitle}</div>" if subtitle else ""
     )
 
-    st.markdown(
+    st.html(
         f"""
         <div class='hero-container'>
             {pills_html}
             <div class='hero-title'>{title_text}</div>
             {subtitle_html}
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )

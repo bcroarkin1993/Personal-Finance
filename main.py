@@ -83,26 +83,26 @@ page_header(
 )
 
 # ----------------- HIGH-LEVEL SNAPSHOT ----------------- #
-st.markdown('<div class="section-title">Today at a Glance</div>', unsafe_allow_html=True)
+st.html('<div class="section-title">Today at a Glance</div>')
 top_col1, top_col2, top_col3, top_col4 = st.columns(4)
 
 with top_col1:
     st.metric("💵 Total Income (YTD)", f"${annual_income:,.2f}")
-    st.markdown('<span class="muted-label">From all tracked sources</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">From all tracked sources</span>')
 
 with top_col2:
     st.metric("🧾 Total Expenses (YTD)", f"${annual_expenses:,.2f}")
-    st.markdown('<span class="muted-label">Across all categories</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Across all categories</span>')
 
 with top_col3:
     # Use delta to color the number green/red
     sr_delta = f"{savings_rate:.1f}%" if savings_rate != 0 else None
     st.metric("📊 Savings Rate", f"{savings_rate:.1f}%", delta=sr_delta)
-    st.markdown('<span class="muted-label">Income left after expenses</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Income left after expenses</span>')
 
 with top_col4:
     st.metric("💼 Portfolio Value", f"${total_portfolio_value:,.2f}")
-    st.markdown('<span class="muted-label">Latest market value</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Latest market value</span>')
 
 st.markdown("")  # spacing
 
@@ -111,7 +111,7 @@ left, right = st.columns(2)
 
 # ----- Budget Overview Column ----- #
 with left:
-    st.markdown('<div class="section-title">💸 Budget Overview</div>', unsafe_allow_html=True)
+    st.html('<div class="section-title">💸 Budget Overview</div>')
     st.write(
         """
         Get a quick read on your cashflow:
@@ -127,10 +127,7 @@ with left:
     with b2:
         st.metric("Avg Monthly Expenses", f"${avg_monthly_expenses:,.2f}")
 
-    st.markdown(
-        f"<span class='muted-label'>Budget data last refreshed: {last_expenses_refresh}</span>",
-        unsafe_allow_html=True,
-    )
+    st.html(f"<span class='muted-label'>Budget data last refreshed: {last_expenses_refresh}</span>")
 
     if st.button("🔄 Refresh Budget Data"):
         run_subprocess_refresh(
@@ -141,7 +138,7 @@ with left:
 
 # ----- Investments Overview Column ----- #
 with right:
-    st.markdown('<div class="section-title">📈 Investments Overview</div>', unsafe_allow_html=True)
+    st.html('<div class="section-title">📈 Investments Overview</div>')
     st.write(
         """
         See how your investments are performing overall:
@@ -160,10 +157,7 @@ with right:
         pl_delta = f"${total_profit:,.2f}" if total_profit != 0 else None
         st.metric("Total Profit / Loss", f"${total_profit:,.2f}", delta=pl_delta)
 
-    st.markdown(
-        f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>",
-        unsafe_allow_html=True,
-    )
+    st.html(f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>")
 
     b_incr, b_full = st.columns(2)
     with b_incr:
@@ -188,7 +182,7 @@ with right:
     st.caption("Incremental: updates prices for today. Full Rebuild: re-fetches all history (fixes corrupt data).")
 
 # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
-st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
+st.html('<div class="section-title">📉 Portfolio Trend Over Time</div>')
 
 if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
     chart_df = daily_equity_df.copy()
@@ -220,10 +214,7 @@ if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubs
     )
 
     st.altair_chart(chart, use_container_width=True)
-    st.markdown(
-        "<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>",
-        unsafe_allow_html=True,
-    )
+    st.html("<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>")
 else:
     st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
 

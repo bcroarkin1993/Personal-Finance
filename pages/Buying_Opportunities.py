@@ -47,7 +47,7 @@ freshness_color = RED if last_updated == "Unknown" else (
     YELLOW if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
     else GREEN
 )
-st.markdown(
+st.html(
     f"""
     <div style='background-color:{BANNER_BG}; padding:12px 16px; border-radius:10px;
                 border-left:5px solid {freshness_color}; margin-bottom:12px;'>
@@ -58,8 +58,7 @@ st.markdown(
         &nbsp;&nbsp;<span style='opacity:0.6; font-size:0.85em;'>
         Prices stale &gt;7 days turn the indicator yellow; &gt;stale shown in red.</span>
     </div>
-    """,
-    unsafe_allow_html=True,
+    """
 )
 
 # ----------------- MARKET CONTEXT STRIP ----------------- #
