@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.theme import page_header
+from scripts.theme import page_header, section_header, grad_divider, GREEN_PIE_PALETTE
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -28,21 +28,18 @@ render_refresh_status()
 # ----------------- DATA LOADING ----------------- #
 data = load_and_preprocess_data()
 
-# Extract DataFrames
-# Note: These come from data_processing.py which converts columns to snake_case
 todays_stocks_complete = data.get("todays_stocks_complete", pd.DataFrame()).copy()
-sector_values = data.get("sector_values", pd.DataFrame()).copy()
-industry_values = data.get("industry_values", pd.DataFrame()).copy()
-stock_info = data.get("stock_info", pd.DataFrame())
+sector_values          = data.get("sector_values",          pd.DataFrame()).copy()
+industry_values        = data.get("industry_values",        pd.DataFrame()).copy()
+stock_info             = data.get("stock_info",             pd.DataFrame())
 
-# Freshness badge
 if not stock_info.empty and "last_updated" in stock_info.columns:
     render_freshness_badge(pd.to_datetime(stock_info["last_updated"]).max(), label="Fundamentals last updated")
 
-# Ensure numeric types for plotting
 if not todays_stocks_complete.empty:
-    todays_stocks_complete["market_value"] = pd.to_numeric(todays_stocks_complete["market_value"],
-                                                           errors="coerce").fillna(0)
+    todays_stocks_complete["market_value"] = pd.to_numeric(
+        todays_stocks_complete["market_value"], errors="coerce"
+    ).fillna(0)
 
 if not sector_values.empty:
     sector_values["market_value"] = pd.to_numeric(sector_values["market_value"], errors="coerce").fillna(0)
@@ -55,16 +52,18 @@ if not industry_values.empty:
 if not todays_stocks_complete.empty:
 
     # --- ROW 1: PIE CHARTS ---
+    st.html(grad_divider())
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("Sector Allocation")
+        st.html(section_header("Sector Allocation", icon="🥧"))
         if not sector_values.empty:
             fig1 = px.pie(
                 sector_values,
                 values='market_value',
                 names='sector',
-                hole=0.4
+                hole=0.4,
+                color_discrete_sequence=GREEN_PIE_PALETTE,
             )
             fig1.update_traces(
                 textposition='inside',
@@ -76,13 +75,11 @@ if not todays_stocks_complete.empty:
             st.info("No sector data available.")
 
     with col2:
-        st.subheader("Industry Allocation")
+        st.html(section_header("Industry Allocation", icon="🏭"))
         if not industry_values.empty:
-            # Group smaller industries into "Other" for cleaner pie chart if too many
             if len(industry_values) > 15:
                 disp_industry = industry_values.head(14).copy()
                 other_val = industry_values.iloc[14:]["market_value"].sum()
-                # Create a DataFrame for "Other"
                 other_row = pd.DataFrame([{"industry": "Other", "market_value": other_val}])
                 disp_industry = pd.concat([disp_industry, other_row], ignore_index=True)
             else:
@@ -92,44 +89,41 @@ if not todays_stocks_complete.empty:
                 disp_industry,
                 values='market_value',
                 names='industry',
-                hole=0.4
+                hole=0.4,
+                color_discrete_sequence=GREEN_PIE_PALETTE,
             )
             fig2.update_traces(
                 textposition='inside',
-                textinfo='percent',  # Label often too long for industry
+                textinfo='percent',
                 hovertemplate='<b>%{label}</b><br>Market Value: $%{value:,.0f}'
             )
             st.plotly_chart(fig2, use_container_width=True)
         else:
             st.info("No industry data available.")
 
-    st.markdown("---")
-
     # --- ROW 2: TREEMAP ---
-    st.subheader("Interactive Hierarchy")
+    st.html(grad_divider())
+    st.html(section_header("Interactive Hierarchy", icon="🗺️"))
 
-    # Toggle
     view_mode = st.radio("Group By:", ["Sector -> Stock", "Industry -> Stock"], horizontal=True)
 
     if view_mode == "Industry -> Stock":
-        path = ['industry', 'stock']
+        path  = ['industry', 'stock']
         title = "Portfolio by Industry"
     else:
-        path = ['sector', 'stock']
+        path  = ['sector', 'stock']
         title = "Portfolio by Sector"
 
-    # Treemap
-    # Note: Treemaps handle NaNs poorly in path, fill them
-    todays_stocks_complete["sector"] = todays_stocks_complete["sector"].fillna("Unknown")
+    todays_stocks_complete["sector"]   = todays_stocks_complete["sector"].fillna("Unknown")
     todays_stocks_complete["industry"] = todays_stocks_complete["industry"].fillna("Unknown")
-    todays_stocks_complete["stock"] = todays_stocks_complete["stock"].fillna("Unknown")
+    todays_stocks_complete["stock"]    = todays_stocks_complete["stock"].fillna("Unknown")
 
     fig_tree = px.treemap(
         todays_stocks_complete,
         path=path,
         values='market_value',
-        color='market_value',  # Optional: color by value or another metric like % change
-        color_continuous_scale='Blues'
+        color='market_value',
+        color_continuous_scale='Greens',
     )
 
     fig_tree.update_traces(

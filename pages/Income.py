@@ -4,7 +4,10 @@ import plotly.express as px
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.theme import page_header
+from scripts.theme import (
+    page_header, section_header, stat_card_grid, html_table, badge, grad_divider,
+    GREEN_PIE_PALETTE,
+)
 from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -30,29 +33,29 @@ render_refresh_status()
 data = load_and_preprocess_data()
 income_df = data["income"].copy()
 
-# Freshness badge
 if not income_df.empty and "date" in income_df.columns:
     render_freshness_badge(pd.to_datetime(income_df["date"], errors="coerce").max(), label="Income data through")
 
-# Rename Source -> Category for consistency
 if "source" in income_df.columns:
     income_df = income_df.rename(columns={"source": "category"})
-
 
 income_df = clean_amount_column(income_df)
 income_df["date"] = pd.to_datetime(income_df["date"], errors="coerce")
 income_df = income_df.dropna(subset=["date"])
 
-# FIX 1: Handle missing description column by using Category/Source
-# In income.csv, 'Source' acts as the description.
 income_df["description_clean"] = income_df["category"].fillna("").astype(str).str.strip().str.upper()
+
+
+def _cat_color(cat: str) -> str:
+    palette = ["teal", "green", "yellow"]
+    return palette[abs(hash(cat)) % len(palette)]
+
 
 # ----------------- FILTERS ----------------- #
 with st.container():
-    st.subheader("Filters")
+    st.html(section_header("Filters", icon="🔍"))
     f_col1, f_col2, f_col3 = st.columns(3)
 
-    # Date Limits
     if not income_df.empty:
         min_date = income_df["date"].min().date()
         max_date = income_df["date"].max().date()
@@ -60,11 +63,8 @@ with st.container():
         min_date = date.today()
         max_date = date.today()
 
-    # Default Date Logic (Clamped to avoid errors)
     default_start = date(date.today().year, 1, 1)
-    # Ensure default end is not in the future relative to data if data ends early
-    default_end = min(date.today(), max_date)
-    # Ensure start is valid
+    default_end   = min(date.today(), max_date)
     if default_start > max_date:
         default_start = min_date
 
@@ -80,8 +80,6 @@ with st.container():
         else:
             start_date, end_date = default_start, default_end
 
-    # FIX 2: Sort Categories by Amount (Highest First)
-    # This prevents the messy list by showing important sources at the top
     if not income_df.empty:
         cat_stats = income_df.groupby("category")["amount"].sum().sort_values(ascending=False)
         sorted_categories = cat_stats.index.tolist()
@@ -110,48 +108,52 @@ if search_term:
     filtered_df = filtered_df[filtered_df["description_clean"].str.contains(search_term.upper())]
 
 # ----------------- METRICS ----------------- #
-total_income = filtered_df["amount"].sum()
+total_income      = filtered_df["amount"].sum()
 transaction_count = len(filtered_df)
-avg_transaction = total_income / transaction_count if transaction_count > 0 else 0.0
+avg_transaction   = total_income / transaction_count if transaction_count > 0 else 0.0
 
-st.divider()
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Income", f"${total_income:,.2f}")
-col2.metric("Transactions", f"{transaction_count}")
-col3.metric("Avg Transaction", f"${avg_transaction:,.2f}")
-st.divider()
+st.html(grad_divider())
+st.html(stat_card_grid([
+    {"label": "Total Income",    "value": f"${total_income:,.2f}",    "icon": "💵"},
+    {"label": "Transactions",    "value": f"{transaction_count}",     "icon": "🔢"},
+    {"label": "Avg Transaction", "value": f"${avg_transaction:,.2f}", "icon": "📊"},
+], cols=3))
+st.html(grad_divider())
 
 # ----------------- VISUALIZATION ----------------- #
 c1, c2 = st.columns([1, 1])
 
 with c1:
-    st.subheader("Income by Source")
+    st.html(section_header("Income by Source", icon="🥧"))
     if not filtered_df.empty:
         cat_group = filtered_df.groupby("category")["amount"].sum().reset_index()
-        fig_cat = px.pie(cat_group, values="amount", names="category", hole=0.4, title="Income Distribution")
+        fig_cat = px.pie(
+            cat_group, values="amount", names="category",
+            hole=0.4, title="Income Distribution",
+            color_discrete_sequence=GREEN_PIE_PALETTE,
+        )
         fig_cat.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig_cat, use_container_width=True)
     else:
         st.info("No data for chart.")
 
 with c2:
-    st.subheader("Top Sources (Bar)")
+    st.html(section_header("Top Sources (Bar)", icon="📊"))
     if not filtered_df.empty:
-        # Since Description IS Category for income, this is just a bar chart version of the pie
         desc_group = (
             filtered_df.groupby("category")
                 .agg(Total_Amount=("amount", "sum"), Count=("amount", "count"))
                 .reset_index().sort_values(by="Total_Amount", ascending=False)
         )
 
-        # Display Top 10
         fig_desc = px.bar(
             desc_group.head(10),
             x="Total_Amount",
             y="category",
             orientation='h',
             text="Total_Amount",
-            title="Top Income Sources by Value"
+            title="Top Income Sources by Value",
+            color_discrete_sequence=GREEN_PIE_PALETTE,
         )
         fig_desc.update_layout(yaxis={'categoryorder': 'total ascending'})
         fig_desc.update_traces(texttemplate="$%{text:,.0f}")
@@ -159,14 +161,29 @@ with c2:
     else:
         st.info("No data for trends.")
 
-# ----------------- TABLE ----------------- #
-st.divider()
-st.subheader("Income Log")
-# Explicitly show 'category' as 'Source' since that's what the user knows
-display_cols = ["date", "category", "amount"]
-if "description" in filtered_df.columns and not filtered_df["description"].isna().all():
-    display_cols.append("description")
+# ----------------- INCOME LOG TABLE ----------------- #
+st.html(grad_divider())
+st.html(section_header("Income Log", icon="📋"))
 
-display_df = filtered_df[display_cols].rename(columns={"category": "Source"}).sort_values("date", ascending=False)
-st.dataframe(display_df.style.format({"amount": "${:,.2f}", "date": "{:%Y-%m-%d}"}), use_container_width=True,
-             height=500)
+if not filtered_df.empty:
+    display_cols = ["date", "category", "amount"]
+    if "description" in filtered_df.columns and not filtered_df["description"].isna().all():
+        display_cols.append("description")
+
+    display_df = filtered_df[display_cols].sort_values("date", ascending=False).copy()
+    display_df["date"] = display_df["date"].dt.strftime("%Y-%m-%d")
+
+    col_map = {"date": "Date", "category": "Source", "amount": "Amount"}
+    if "description" in display_df.columns:
+        col_map["description"] = "Description"
+
+    st.html(html_table(
+        display_df,
+        col_labels=col_map,
+        formatters={
+            "Amount": "${:,.2f}",
+            "Source": lambda v: badge(str(v), _cat_color(str(v))),
+        },
+    ))
+else:
+    st.info("No income records to display for the selected filters.")

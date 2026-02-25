@@ -4,7 +4,10 @@ import plotly.express as px
 from datetime import date
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.theme import page_header
+from scripts.theme import (
+    page_header, section_header, stat_card_grid, html_table, badge, grad_divider,
+    GREEN_PIE_PALETTE,
+)
 from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -30,25 +33,29 @@ render_refresh_status()
 data = load_and_preprocess_data()
 expenses_df = data["expenses"].copy()
 
-# Freshness badge
 if not expenses_df.empty and "date" in expenses_df.columns:
     render_freshness_badge(pd.to_datetime(expenses_df["date"], errors="coerce").max(), label="Expense data through")
 
 if "expense_category" in expenses_df.columns:
     expenses_df = expenses_df.rename(columns={"expense_category": "category"})
 
-
 expenses_df = clean_amount_column(expenses_df)
 expenses_df["date"] = pd.to_datetime(expenses_df["date"], errors="coerce")
 expenses_df = expenses_df.dropna(subset=["date"])
 expenses_df["description_clean"] = expenses_df["description"].fillna("").astype(str).str.strip().str.upper()
 
+# Build a stable category → badge color mapping (cycles through 4 colors)
+_BADGE_COLORS = ["teal", "green", "yellow", "teal"]
+
+def _cat_color(cat: str) -> str:
+    palette = ["teal", "green", "yellow"]
+    return palette[abs(hash(cat)) % len(palette)]
+
 # ----------------- FILTERS ----------------- #
 with st.container():
-    st.subheader("Filters")
+    st.html(section_header("Filters", icon="🔍"))
     f_col1, f_col2, f_col3 = st.columns(3)
 
-    # 1. Date Range
     if not expenses_df.empty:
         min_date = expenses_df["date"].min().date()
         max_date = expenses_df["date"].max().date()
@@ -56,11 +63,9 @@ with st.container():
         min_date = date.today()
         max_date = date.today()
 
-    # FIX: Ensure default selection is within bounds [min_date, max_date]
     default_start = date(date.today().year, 1, 1)
-    default_end = min(date.today(), max_date)  # Clamp to max data date
+    default_end   = min(date.today(), max_date)
 
-    # Handle case where start of year is after max date (e.g. stale data)
     if default_start > max_date:
         default_start = min_date
 
@@ -76,12 +81,10 @@ with st.container():
         else:
             start_date, end_date = default_start, default_end
 
-    # 2. Category Filter
     unique_categories = sorted(expenses_df["category"].dropna().astype(str).unique().tolist())
     with f_col2:
         selected_categories = st.multiselect("Category", options=unique_categories, default=unique_categories)
 
-    # 3. Description Search
     with f_col3:
         search_term = st.text_input("Search Description (e.g., 'Uber')", "")
 
@@ -97,32 +100,37 @@ if search_term:
     filtered_df = filtered_df[filtered_df["description_clean"].str.contains(search_term.upper())]
 
 # ----------------- METRICS ----------------- #
-total_spend = filtered_df["amount"].sum()
+total_spend       = filtered_df["amount"].sum()
 transaction_count = len(filtered_df)
-avg_transaction = total_spend / transaction_count if transaction_count > 0 else 0.0
+avg_transaction   = total_spend / transaction_count if transaction_count > 0 else 0.0
 
-st.divider()
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Expenses", f"${total_spend:,.2f}")
-col2.metric("Transactions", f"{transaction_count}")
-col3.metric("Avg Transaction", f"${avg_transaction:,.2f}")
-st.divider()
+st.html(grad_divider())
+st.html(stat_card_grid([
+    {"label": "Total Expenses",   "value": f"${total_spend:,.2f}",      "icon": "🧾", "positive": False},
+    {"label": "Transactions",     "value": f"{transaction_count}",       "icon": "🔢"},
+    {"label": "Avg Transaction",  "value": f"${avg_transaction:,.2f}",   "icon": "📊"},
+], cols=3))
+st.html(grad_divider())
 
 # ----------------- VISUALIZATION ----------------- #
 c1, c2 = st.columns([1, 1])
 
 with c1:
-    st.subheader("Spending by Category")
+    st.html(section_header("Spending by Category", icon="🥧"))
     if not filtered_df.empty:
         cat_group = filtered_df.groupby("category")["amount"].sum().reset_index()
-        fig_cat = px.pie(cat_group, values="amount", names="category", hole=0.4, title="Expense Distribution")
+        fig_cat = px.pie(
+            cat_group, values="amount", names="category",
+            hole=0.4, title="Expense Distribution",
+            color_discrete_sequence=GREEN_PIE_PALETTE,
+        )
         fig_cat.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig_cat, use_container_width=True)
     else:
         st.info("No data for chart.")
 
 with c2:
-    st.subheader("Description Trends")
+    st.html(section_header("Description Trends", icon="📊"))
     if not filtered_df.empty:
         desc_group = (
             filtered_df.groupby("description_clean")
@@ -132,12 +140,14 @@ with c2:
         sort_mode = st.radio("Sort Trends By:", ["Frequency (Count)", "Total Spent ($)"], horizontal=True)
         if sort_mode == "Frequency (Count)":
             top_desc = desc_group.sort_values("Count", ascending=False).head(10)
-            y_axis = "Count"
+            y_axis   = "Count"
         else:
             top_desc = desc_group.sort_values("Total_Amount", ascending=False).head(10)
-            y_axis = "Total_Amount"
+            y_axis   = "Total_Amount"
 
-        fig_desc = px.bar(top_desc, x=y_axis, y="description_clean", orientation='h', text=y_axis, color="Category")
+        fig_desc = px.bar(top_desc, x=y_axis, y="description_clean", orientation='h',
+                          text=y_axis, color="Category",
+                          color_discrete_sequence=GREEN_PIE_PALETTE)
         fig_desc.update_layout(yaxis={'categoryorder': 'total ascending'})
         if sort_mode == "Total Spent ($)":
             fig_desc.update_traces(texttemplate="$%{text:,.0f}")
@@ -145,9 +155,27 @@ with c2:
     else:
         st.info("No data for trends.")
 
-# ----------------- TABLE ----------------- #
-st.divider()
-st.subheader("Detailed Transaction Log")
-display_df = filtered_df[["date", "category", "description", "amount"]].sort_values("date", ascending=False)
-st.dataframe(display_df.style.format({"amount": "${:,.2f}", "date": "{:%Y-%m-%d}"}), use_container_width=True,
-             height=500)
+# ----------------- TRANSACTION TABLE ----------------- #
+st.html(grad_divider())
+st.html(section_header("Detailed Transaction Log", icon="📋"))
+
+if not filtered_df.empty:
+    display_df = filtered_df[["date", "category", "description", "amount"]].sort_values("date", ascending=False).copy()
+    display_df["date"] = display_df["date"].dt.strftime("%Y-%m-%d")
+    display_df["description"] = display_df["description"].fillna("")
+
+    st.html(html_table(
+        display_df,
+        col_labels={
+            "date":        "Date",
+            "category":    "Category",
+            "description": "Description",
+            "amount":      "Amount",
+        },
+        formatters={
+            "Amount":   "${:,.2f}",
+            "Category": lambda v: badge(str(v), _cat_color(str(v))),
+        },
+    ))
+else:
+    st.info("No transactions to display for the selected filters.")
