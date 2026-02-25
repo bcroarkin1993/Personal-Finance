@@ -217,16 +217,10 @@ Run with: `venv/bin/python -m pytest tests/ -v`
 
 ---
 
-### 8. Documentation & Deployment (README.md) (was §6)
+### 8. Documentation & Deployment (README.md) (was §6) ✅ *Completed — merged to main*
 
-The current README is a stub that references placeholder URLs and omits most setup details.
-
-- [ ] **Write a complete local setup guide.** Cover cloning the repo, creating the virtual environment, installing dependencies from `requirements.txt`, and configuring `config/config.ini` (run mode). Note that the Budget Excel file must live at `~/Documents/Personal-Finance/Budget/Budget.xlsx` and explain what the expected sheet structure is (`Monthly Budget <Month Year>` and `Budget v Actual`).
-
-- [ ] **Document `stock_dictionary.json` setup.** Explain the schema (ticker key, `stock_name`, `purchase_history` array with `date`, `buy_sell`, `quantity`, `share_price`, `platform`, `account_type`) and walk through adding a new position and a sell transaction. This is the one manual data-entry step and the most likely point of confusion for a new user.
-
-- [ ] **Document the data refresh workflow.** Explain when to run `process_budget_data.py` vs `process_investment_data.py`, what `--full` does vs incremental, and how the Refresh buttons in the UI trigger the same scripts. Include a note on how often each should be run (e.g. budget monthly after reconciling the Excel file, investments whenever you want updated prices).
-
-- [ ] **Add a page-by-page user guide.** A short paragraph per page describing what it shows and how to use it — especially the Buying Opportunities scoring engine (what the score means, how to tune the weights) and the Holdings Leaderboard (how to add logos to `downloaded_logos/`).
-
-- [ ] **Document the three-scope budget model.** Once multi-person tracking is implemented (Section 2 above), document how Brandon personal / shared household / wife personal scopes map to the Excel sheet structure and how to filter between them in the app.
+- [x] **Write a complete local setup guide.** Covers venv setup, `config/config.ini`, Budget Excel path and required sheet names (`Monthly Budget <Month Year>` and `Budget v Actual`).
+- [x] **Document `stock_dictionary.json` setup.** Full schema reference, examples for buy/sell/watchlist entries, and instructions for adding new positions.
+- [x] **Document the data refresh workflow.** Incremental vs. `--full`, when to run each script, and how UI Refresh buttons map to the same scripts.
+- [x] **Add a page-by-page user guide.** All 9 pages documented including Buying Opportunities signal table and Holdings Leaderboard logo instructions.
+- [ ] **Document the three-scope budget model.** Blocked on §2 (Multi-Person Budget Tracking) — will add once `person`/`card` columns are implemented.
