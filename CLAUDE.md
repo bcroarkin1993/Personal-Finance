@@ -208,18 +208,11 @@ Run with: `venv/bin/python -m pytest tests/ -v`
 
 ---
 
-### 7. Performance — Data Loading & Refresh Speed
-
-The two biggest pain points are the initial page load time and how long a full investment refresh takes. Both should be improved before the app is used regularly by two people.
-
-- [ ] **Profile the cold-start load time.** `load_and_preprocess_data()` reads 6 CSVs, runs two merges, computes daily equity aggregates, and runs buying opportunity scoring (including a VIX call). Instrument with `time.perf_counter` to identify the slowest steps before optimizing.
+### 7. Performance — Data Loading & Refresh Speed ✅ *Completed — merged to main*
 
 - [x] **Parallelize yfinance fetches in `process_investment_data.py`.** `_fetch_ticker_metadata()` extracted as a worker function; `build_summary_dataframe()` Phase 3 replaced with `ThreadPoolExecutor(max_workers=3)` + 0.5s submission stagger + `as_completed()` collection. Reduces metadata phase from ~90s to ~30s.
-
 - [x] **Skip unchanged tickers in `create_stock_info_table`.** `FUNDAMENTALS_STALE_HOURS = 23` threshold skips tickers whose `Last Updated` is less than 23 hours old in incremental mode.
-
-- [x] **Defer buying opportunity scoring out of `load_and_preprocess_data`.** Scoring block (market context fetch + both `calculate_buying_opportunity_scores` calls) removed from `preprocess_data()`. `Buying_Opportunities.py` calls `load_market_context()` directly. Eliminates 2 yfinance API calls from cold-start for all 8 non-scoring pages.
-
+- [x] **Defer buying opportunity scoring out of `load_and_preprocess_data`.** Scoring block removed from `preprocess_data()`; `Buying_Opportunities.py` calls `load_market_context()` directly. Eliminates 2 yfinance API calls from cold-start for all 8 non-scoring pages.
 - [x] **Add a `ttl` to `load_main_data` cache.** Both `load_main_data` and `load_and_preprocess_data` now have `ttl=1800`.
 
 ---
