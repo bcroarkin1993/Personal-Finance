@@ -248,7 +248,7 @@ for i, ticker in enumerate(tickers):
         {
             "Date":  normalized.index,
             "Delta": normalized[ticker] - peer_avg,
-1)         }
+        }
     )
 
     delta_chart = (
