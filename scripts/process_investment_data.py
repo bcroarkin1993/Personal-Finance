@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import yfinance as yf
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date, timedelta
 from pathlib import Path
 
@@ -287,6 +288,66 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
     return combined
 
 
+def _fetch_ticker_metadata(ticker: str, pos: dict, latest_prices: dict) -> dict:
+    """
+    Fetches 52-week range, company name, and pct_change for a single ticker.
+    Designed to run inside a ThreadPoolExecutor worker — sleeps API_DELAY before
+    making any network calls to keep per-thread request rate inside Yahoo's limits.
+    Returns a flat dict of all columns needed for stocks.csv.
+    Raises on unrecoverable failure so the caller can append a fallback row.
+    """
+    total_quantity = pos["total_quantity"]
+    total_cost = pos["total_cost"]
+    company_name = pos["company_name"]
+    current_price = float(latest_prices.get(ticker, 0))
+
+    high_52 = 0.0
+    low_52 = 0.0
+    pct_change = 0.0
+
+    time.sleep(API_DELAY)
+    stock = yf.Ticker(ticker)
+
+    # 52wk range via fast_info (lightweight call)
+    try:
+        fi = stock.fast_info
+        high_52 = getattr(fi, "year_high", None) or 0.0
+        low_52 = getattr(fi, "year_low", None) or 0.0
+        # Use fast_info price only if daily history gave us nothing
+        if current_price == 0:
+            current_price = float(
+                getattr(fi, "last_price", None) or
+                getattr(fi, "previous_close", None) or 0
+            )
+    except Exception:
+        pass
+
+    # Company name and 52-week change from full info
+    try:
+        info = _safe_ticker_info(ticker)
+        company_name = info.get("longName", company_name)
+        pct_change = (info.get("52WeekChange", 0) or 0) * 100
+    except Exception:
+        pass
+
+    avg_cost = total_cost / total_quantity if total_quantity > 0 else 0
+    market_value = total_quantity * current_price
+    equity_change = market_value - total_cost
+
+    return {
+        "ticker": ticker,
+        "company_name": company_name,
+        "current_price": current_price,
+        "total_quantity": total_quantity,
+        "avg_cost": avg_cost,
+        "market_value": market_value,
+        "pct_change": pct_change,
+        "equity_change": equity_change,
+        "high_52": high_52,
+        "low_52": low_52,
+    }
+
+
 def build_summary_dataframe(stock_dictionary, daily_df: pd.DataFrame) -> pd.DataFrame:
     """
     Builds the current-holdings snapshot (stocks.csv) by:
@@ -335,78 +396,52 @@ def build_summary_dataframe(stock_dictionary, daily_df: pd.DataFrame) -> pd.Data
         found = sum(1 for t in active_tickers if latest_prices.get(t, 0) > 0)
         print(f"     Prices sourced from history: {found}/{len(active_tickers)}")
 
-    # Phase 3: per-ticker metadata (52wk range, pct_change)
-    print(f"     Fetching metadata for {len(active_tickers)} tickers...")
+    # Phase 3: per-ticker metadata (52wk range, pct_change) — parallel fetch
+    # 3 workers × API_DELAY sleep per worker ≈ 3× throughput vs sequential.
+    # Submissions are staggered 0.5s apart so the first batch of workers doesn't
+    # burst all three API calls at the same instant.
+    print(f"     Fetching metadata for {len(active_tickers)} tickers "
+          f"(parallel, max_workers=3)...")
     stock_data = []
-    consecutive_failures = 0
+    total_failures = 0
 
-    for ticker in active_tickers:
-        if consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
-            print(f"     Circuit breaker: stopping metadata fetch after "
-                  f"{CIRCUIT_BREAKER_THRESHOLD} consecutive failures.")
-            # Fill remaining tickers with zeros
-            for remaining in active_tickers[active_tickers.index(ticker):]:
-                pos = active_positions[remaining]
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {}
+        for ticker in active_tickers:
+            time.sleep(0.5)  # stagger submissions to prevent initial burst
+            fut = executor.submit(
+                _fetch_ticker_metadata, ticker, active_positions[ticker], latest_prices
+            )
+            futures[fut] = ticker
+
+        for fut in as_completed(futures):
+            ticker = futures[fut]
+            try:
+                r = fut.result()
+                stock_data.append([
+                    r["ticker"], r["company_name"], r["current_price"],
+                    r["total_quantity"], r["avg_cost"], r["market_value"],
+                    r["pct_change"], r["equity_change"], r["high_52"], r["low_52"],
+                    "Stock"
+                ])
+            except Exception as e:
+                print(f"     [{ticker}] metadata fetch failed: {e}")
+                total_failures += 1
+                # Zero-filled fallback so the ticker still appears in stocks.csv
+                pos = active_positions[ticker]
                 tq = pos["total_quantity"]
                 tc = pos["total_cost"]
-                cp = float(latest_prices.get(remaining, 0))
+                cp = float(latest_prices.get(ticker, 0))
                 stock_data.append([
-                    remaining, pos["company_name"], cp, tq,
+                    ticker, pos["company_name"], cp, tq,
                     tc / tq if tq > 0 else 0,
                     tq * cp, 0.0, tq * cp - tc, 0.0, 0.0, "Stock"
                 ])
-            break
 
-        pos = active_positions[ticker]
-        total_quantity = pos["total_quantity"]
-        total_cost = pos["total_cost"]
-        company_name = pos["company_name"]
-        current_price = float(latest_prices.get(ticker, 0))
-
-        high_52 = 0.0
-        low_52 = 0.0
-        pct_change = 0.0
-
-        try:
-            time.sleep(API_DELAY)
-            stock = yf.Ticker(ticker)
-
-            # 52wk range via fast_info
-            try:
-                fi = stock.fast_info
-                high_52 = getattr(fi, "year_high", None) or 0
-                low_52 = getattr(fi, "year_low", None) or 0
-                # Use fast_info price only if history gave us nothing
-                if current_price == 0:
-                    current_price = float(
-                        getattr(fi, "last_price", None) or
-                        getattr(fi, "previous_close", None) or 0
-                    )
-            except Exception:
-                pass
-
-            # Company name and pct_change from full info
-            try:
-                info = _safe_ticker_info(ticker)
-                company_name = info.get("longName", company_name)
-                pct_change = (info.get("52WeekChange", 0) or 0) * 100
-            except Exception:
-                pass
-
-            consecutive_failures = 0
-
-        except Exception as e:
-            print(f"     [{ticker}] metadata fetch failed: {e}")
-            consecutive_failures += 1
-
-        avg_cost = total_cost / total_quantity if total_quantity > 0 else 0
-        market_value = total_quantity * current_price
-        equity_change = market_value - total_cost
-
-        stock_data.append([
-            ticker, company_name, current_price, total_quantity, avg_cost,
-            market_value, pct_change, equity_change, high_52, low_52, "Stock"
-        ])
+    if total_failures >= CIRCUIT_BREAKER_THRESHOLD:
+        print(f"     Warning: {total_failures} tickers failed metadata fetch — "
+              f"Yahoo Finance may be rate-limiting. Prices from daily history "
+              f"are still accurate; metadata (52W range, pct_change) may be stale.")
 
     cols = ["Stock", "Company", "Price", "Quantity", "Avg_Cost", "Market_Value",
             "Percent_Change", "Equity_Change", "52_Week_High", "52_Week_Low", "Asset_Type"]
