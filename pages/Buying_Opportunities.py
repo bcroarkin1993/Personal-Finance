@@ -80,37 +80,48 @@ mc3.metric("Market Sentiment Score", f"{sentiment:.2f} / 1.00",
 
 st.divider()
 
-# ----------------- WEIGHT CONTROLS ----------------- #
+# ----------------- CASH INPUT + WEIGHT CONTROLS ----------------- #
 with st.expander("⚙️ Customize Scoring Weights", expanded=False):
+    portfolio_cash = st.number_input(
+        "💵 Available Cash to Deploy ($)",
+        min_value=0, max_value=100_000, value=5_000, step=1_000,
+        help="Higher available cash raises all buy scores — more capital = wider opportunity. Cap is $50,000.",
+    )
     st.markdown("Adjust how much each signal contributes to the Buy Score. Weights are normalized automatically.")
     wc1, wc2, wc3 = st.columns(3)
     with wc1:
-        w_52wk = st.slider("📉 52-Week Discount", 0, 50, 25, 5,
+        w_52wk = st.slider("📉 52-Week Discount", 0, 50, 20, 5,
                            help="How far below the 52-week high the stock is trading") / 100
-        w_diversity = st.slider("📊 Portfolio Diversity", 0, 50, 20, 5,
+        w_diversity = st.slider("📊 Portfolio Diversity", 0, 50, 5, 5,
                                 help="Preference for stocks with lower current portfolio weight") / 100
     with wc2:
-        w_target = st.slider("🎯 Analyst Target Upside", 0, 50, 20, 5,
+        w_target = st.slider("🎯 Analyst Target Upside", 0, 50, 15, 5,
                              help="Upside to analyst consensus price target") / 100
         w_risk = st.slider("🛡️ Governance Risk", 0, 50, 15, 5,
                            help="Lower governance risk scores rank higher") / 100
+        w_pe = st.slider("💲 Industry PE", 0, 50, 15, 5,
+                         help="Stocks trading below their industry median PE rank higher. "
+                              "Negative/missing PE stocks are scored neutral (0.5).") / 100
     with wc3:
-        w_sentiment = st.slider("🌡️ Market Sentiment", 0, 50, 15, 5,
+        w_sentiment = st.slider("🌡️ Market Sentiment", 0, 50, 10, 5,
                                 help="VIX-based fear indicator — higher fear = better buying conditions") / 100
         w_cash = st.slider("💵 Cash Bonus", 0, 20, 5, 5,
-                           help="Bonus for available portfolio cash (currently hardcoded at $5,000)") / 100
+                           help="Bonus for available cash to deploy (cap: $50,000)") / 100
+        w_rsi = st.slider("📈 RSI (Oversold)", 0, 50, 15, 5,
+                          help="14-day RSI: lower RSI = more oversold = higher score. "
+                               "RSI 30 → 0.70, RSI 50 → 0.50, RSI 70 → 0.30.") / 100
 
-    total_weight = w_52wk + w_diversity + w_target + w_risk + w_sentiment + w_cash
+    total_weight = w_52wk + w_diversity + w_target + w_risk + w_sentiment + w_cash + w_rsi + w_pe
     if abs(total_weight - 1.0) > 0.01:
         st.warning(f"Weights sum to {total_weight:.0%} — they will be normalized to 100% for scoring.")
     else:
         st.success("Weights sum to 100% ✓")
 
 # Normalize weights so they always sum to 1
-weight_sum = w_52wk + w_diversity + w_target + w_risk + w_sentiment + w_cash
+weight_sum = w_52wk + w_diversity + w_target + w_risk + w_sentiment + w_cash + w_rsi + w_pe
 if weight_sum > 0:
-    w_52wk, w_diversity, w_target, w_risk, w_sentiment, w_cash = (
-        w / weight_sum for w in (w_52wk, w_diversity, w_target, w_risk, w_sentiment, w_cash)
+    w_52wk, w_diversity, w_target, w_risk, w_sentiment, w_cash, w_rsi, w_pe = (
+        w / weight_sum for w in (w_52wk, w_diversity, w_target, w_risk, w_sentiment, w_cash, w_rsi, w_pe)
     )
 
 # ----------------- RE-SCORE WITH USER WEIGHTS ----------------- #
@@ -122,22 +133,25 @@ rebuy_df = pd.DataFrame()
 if not stocks_complete.empty and "price" in stocks_complete.columns:
     rebuy_df = calculate_buying_opportunity_scores(
         stocks_complete,
-        portfolio_cash=5000,
+        portfolio_cash=portfolio_cash,
         market_sentiment_score=mss,
-        w_52wk=w_52wk, w_diversity=w_diversity, w_target=w_target,
-        w_risk=w_risk, w_sentiment=w_sentiment, w_cash=w_cash,
+        w_52wk=w_52wk, w_target=w_target, w_rsi=w_rsi, w_pe=w_pe,
+        w_risk=w_risk, w_sentiment=w_sentiment, w_diversity=w_diversity, w_cash=w_cash,
     )
 
 new_buy_df = pd.DataFrame()
-if not stock_info.empty and not stocks.empty and "price" in stock_info.columns:
+if (not stock_info.empty and not stocks.empty
+        and "price" in stock_info.columns
+        and "52_week_high" in stock_info.columns):
     owned = stocks["stock"].unique() if "stock" in stocks.columns else []
     watchlist = stock_info[~stock_info["stock"].isin(owned)].copy()
     if not watchlist.empty:
         new_buy_df = calculate_buying_opportunity_scores(
             watchlist,
+            portfolio_cash=portfolio_cash,
             market_sentiment_score=mss,
-            w_52wk=w_52wk, w_diversity=w_diversity, w_target=w_target,
-            w_risk=w_risk, w_sentiment=w_sentiment, w_cash=w_cash,
+            w_52wk=w_52wk, w_target=w_target, w_rsi=w_rsi, w_pe=w_pe,
+            w_risk=w_risk, w_sentiment=w_sentiment, w_diversity=w_diversity, w_cash=w_cash,
         )
 
 # ----------------- TABS ----------------- #
@@ -147,18 +161,21 @@ tab1, tab2 = st.tabs(["🔄 Re-Buy (Current Portfolio)", "🔍 New Opportunities
 def render_score_breakdown(df: pd.DataFrame):
     """Renders the detailed scoring breakdown table with all signal components."""
     score_cols = {
-        "stock": "Ticker",
-        "company": "Company",
-        "price": "Price",
-        "52_week_high": "52W High",
-        "discount_pct": "Discount %",
+        "stock":          "Ticker",
+        "company":        "Company",
+        "price":          "Price",
+        "52_week_high":   "52W High",
+        "discount_pct":   "Discount %",
+        "rsi_14":         "RSI (14d)",
         "target_mean_price": "Target Price",
-        "score_52wk": "52W Score",
-        "score_target": "Target Score",
+        "score_52wk":     "52W Score",
+        "score_target":   "Target Score",
+        "score_rsi":      "RSI Score",
+        "score_pe":       "PE Score",
         "score_diversity": "Diversity Score",
-        "score_risk": "Risk Score",
+        "score_risk":     "Risk Score",
         "score_sentiment": "Sentiment Score",
-        "buy_score": "Buy Score",
+        "buy_score":      "Buy Score",
     }
     valid = {k: v for k, v in score_cols.items() if k in df.columns}
     display = df[list(valid.keys())].rename(columns=valid).copy()
@@ -168,14 +185,14 @@ def render_score_breakdown(df: pd.DataFrame):
     if "52W High" in display.columns:     fmt["52W High"] = "${:,.2f}"
     if "Target Price" in display.columns: fmt["Target Price"] = "${:,.2f}"
     if "Discount %" in display.columns:   fmt["Discount %"] = "{:.1%}"
-    for score_col in ["52W Score", "Target Score", "Diversity Score", "Risk Score", "Sentiment Score"]:
+    if "RSI (14d)" in display.columns:    fmt["RSI (14d)"] = "{:.1f}"
+    for score_col in ["52W Score", "Target Score", "RSI Score", "PE Score",
+                      "Diversity Score", "Risk Score", "Sentiment Score"]:
         if score_col in display.columns:  fmt[score_col] = "{:.2f}"
     if "Buy Score" in display.columns:    fmt["Buy Score"] = "{:.1f}"
 
-    gradient_cols = [c for c in ["Buy Score", "52W Score", "Target Score"] if c in display.columns]
-
     styled = display.style.format(fmt)
-    if gradient_cols:
+    if "Buy Score" in display.columns:
         styled = styled.background_gradient(subset=["Buy Score"], cmap="RdYlGn", vmin=0, vmax=100)
 
     st.dataframe(styled, use_container_width=True, hide_index=True)

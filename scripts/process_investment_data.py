@@ -122,6 +122,17 @@ def _safe_ticker_info(ticker: str, retries: int = 2) -> dict:
 
 # ----------------- CORE LOGIC ----------------- #
 
+def _compute_rsi(closes: pd.Series, period: int = 14) -> float:
+    """Wilder's RSI. Returns 50.0 (neutral) if fewer than period+1 data points."""
+    if len(closes) < period + 1:
+        return 50.0
+    delta = closes.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1/period, adjust=False).mean()
+    loss = (-delta.clip(upper=0)).ewm(alpha=1/period, adjust=False).mean()
+    rs = gain / loss.replace(0, 1e-10)
+    return float((100 - 100 / (1 + rs)).iloc[-1])
+
+
 def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
     """
     Fetches price history for every ticker and replays transactions to produce
@@ -424,7 +435,7 @@ def build_summary_dataframe(stock_dictionary, daily_df: pd.DataFrame) -> pd.Data
     return pd.DataFrame(columns=cols)
 
 
-def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
+def create_stock_info_table(stock_dict, csv_path, full_refresh=False, daily_df=None):
     """
     Fetches fundamentals (sector, PE, target price, etc.) for all tickers.
 
@@ -494,8 +505,10 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
             def get(key, default=0):
                 return info.get(key, default)
 
-            # Current price from fast_info (lighter endpoint than quoteSummary)
+            # Current price + 52W range from fast_info
             price = 0
+            week_high_52 = 0
+            week_low_52 = 0
             try:
                 fi = yf.Ticker(ticker).fast_info
                 price = float(
@@ -503,8 +516,24 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
                     getattr(fi, "previous_close", None) or
                     get("currentPrice", 0)
                 )
+                week_high_52 = getattr(fi, "year_high", None) or 0
+                week_low_52 = getattr(fi, "year_low", None) or 0
             except Exception:
                 price = float(get("currentPrice", 0))
+
+            # RSI: use existing daily history if available, else fetch 1-month history
+            rsi_val = 50.0
+            try:
+                if daily_df is not None and not daily_df.empty and "Stock" in daily_df.columns:
+                    tkr_hist = daily_df[daily_df["Stock"] == ticker]["Close"]
+                    if len(tkr_hist) >= 15:
+                        rsi_val = _compute_rsi(tkr_hist.reset_index(drop=True))
+                if rsi_val == 50.0:  # fallback: fetch fresh 1mo history
+                    hist = yf.Ticker(ticker).history(period="1mo")
+                    if not hist.empty:
+                        rsi_val = _compute_rsi(hist["Close"].reset_index(drop=True))
+            except Exception:
+                pass
 
             row = {
                 "Stock": ticker,
@@ -530,6 +559,9 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
                 "Shareholder Rights Risk": get("shareHolderRightsRisk", 5),
                 "Overall Risk": get("overallRisk", 5),
                 "Price": price,
+                "52 Week High": week_high_52,
+                "52 Week Low":  week_low_52,
+                "RSI 14":       round(rsi_val, 2),
             }
 
             data_list.append(row)
@@ -598,7 +630,7 @@ if __name__ == "__main__":
         print("   > Warning: stocks.csv result empty. Skipping save.")
 
     # 3. Fundamentals — skips fresh tickers; circuit-breaker stops early if rate-limited
-    info_df = create_stock_info_table(stock_dict, STOCK_INFO_CSV_PATH, args.full)
+    info_df = create_stock_info_table(stock_dict, STOCK_INFO_CSV_PATH, args.full, daily_df=daily_df)
     if not info_df.empty:
         info_df.to_csv(STOCK_INFO_CSV_PATH, index=False)
         print(f"   > Saved stock_info.csv ({len(info_df)} rows)")
