@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.utils import clean_amount_column
+from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Income Analysis", page_icon="💵", layout="wide")
@@ -12,11 +12,27 @@ st.set_page_config(page_title="Income Analysis", page_icon="💵", layout="wide"
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Income Analysis")
 
-st.title("💵 Income Analysis")
+col_title, col_refresh = st.columns([4, 1])
+with col_title:
+    st.title("💵 Income Analysis")
+with col_refresh:
+    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        run_subprocess_refresh(
+            "scripts/process_budget_data.py",
+            clear_all_caches,
+            "Processing Budget.xlsx...",
+        )
+
+render_refresh_status()
 
 # ----------------- DATA LOADING & CLEANING ----------------- #
 data = load_and_preprocess_data()
 income_df = data["income"].copy()
+
+# Freshness badge
+if not income_df.empty and "date" in income_df.columns:
+    render_freshness_badge(pd.to_datetime(income_df["date"], errors="coerce").max(), label="Income data through")
 
 # Rename Source -> Category for consistency
 if "source" in income_df.columns:

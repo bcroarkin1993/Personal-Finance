@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.express as px
 import random  # Added for random selection
 from datetime import datetime, timedelta
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Company Deep Dive", page_icon="🏢", layout="wide")
@@ -12,12 +13,28 @@ st.set_page_config(page_title="Company Deep Dive", page_icon="🏢", layout="wid
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Company Deep-Dive")
 
-st.title("🏢 Company Deep-Dive")
+col_title, col_refresh = st.columns([4, 1])
+with col_title:
+    st.title("🏢 Company Deep-Dive")
+with col_refresh:
+    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        run_subprocess_refresh(
+            "scripts/process_investment_data.py",
+            clear_all_caches,
+            "Fetching latest prices and fundamentals...",
+        )
+
+render_refresh_status()
 
 # ----------------- DATA LOADING ----------------- #
 data = load_and_preprocess_data()
 stock_info = data["stock_info"].copy()
 daily_stocks = data["daily_stocks"].copy()
+
+# Freshness badge
+if not stock_info.empty and "last_updated" in stock_info.columns:
+    render_freshness_badge(pd.to_datetime(stock_info["last_updated"]).max(), label="Fundamentals last updated")
 
 # Ensure we have a clean list of companies
 # We want to pick by "Company Name (Ticker)" for readability

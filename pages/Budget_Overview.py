@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import date
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.utils import clean_amount_column
+from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide")
@@ -12,12 +12,33 @@ st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide"
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Budget Overview")
 
-st.title("💸 Budget Overview")
+col_title, col_refresh = st.columns([4, 1])
+with col_title:
+    st.title("💸 Budget Overview")
+with col_refresh:
+    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 Refresh Data", use_container_width=True):
+        run_subprocess_refresh(
+            "scripts/process_budget_data.py",
+            clear_all_caches,
+            "Processing Budget.xlsx...",
+        )
+
+render_refresh_status()
 
 # ----------------- DATA LOADING & CLEANING ----------------- #
 data = load_and_preprocess_data()
 income_df = data["income"].copy()
 expenses_df = data["expenses"].copy()
+
+# Freshness badge — based on latest transaction date
+_budget_max_date = None
+if not expenses_df.empty and "date" in expenses_df.columns:
+    _budget_max_date = pd.to_datetime(expenses_df["date"], errors="coerce").max()
+elif not income_df.empty and "date" in income_df.columns:
+    _budget_max_date = pd.to_datetime(income_df["date"], errors="coerce").max()
+if _budget_max_date is not None:
+    render_freshness_badge(_budget_max_date, label="Budget data through")
 
 # Standardize column names
 if "expense_category" in expenses_df.columns:

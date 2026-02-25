@@ -1,17 +1,18 @@
-import subprocess
 from typing import Dict, Any
 
 import pandas as pd
 import streamlit as st
 import altair as alt
 
-from scripts.data_processing import load_and_preprocess_data
+from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
 from scripts.utils import (
     calculate_average_monthly_total,
     calculate_yearly_total,
     get_last_refresh_date_from_df,
-    get_portfolio_snapshot
+    get_portfolio_snapshot,
+    run_subprocess_refresh,
+    render_refresh_status,
 )
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -93,6 +94,9 @@ st.markdown(
 )
 
 # ----------------- HOME PAGE LOGIC ----------------- #
+
+# Show any pending refresh result from the previous run
+render_refresh_status()
 
 # Load data safely (returns empty DFs if files missing)
 data: Dict[str, Any] = load_and_preprocess_data()
@@ -199,17 +203,11 @@ with left:
     )
 
     if st.button("🔄 Refresh Budget Data"):
-        with st.spinner("Processing Budget.xlsx..."):
-            try:
-                subprocess.run(
-                    ["python", "scripts/process_budget_data.py"],
-                    check=True,
-                )
-                load_and_preprocess_data.clear()
-                st.success("Budget data updated! Reloading...")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to update budget data: {e}")
+        run_subprocess_refresh(
+            "scripts/process_budget_data.py",
+            clear_all_caches,
+            "Processing Budget.xlsx...",
+        )
 
 # ----- Investments Overview Column ----- #
 with right:
@@ -237,18 +235,27 @@ with right:
         unsafe_allow_html=True,
     )
 
-    if st.button("🔄 Refresh Investment Data"):
-        with st.spinner("Fetching market data (Incremental)..."):
-            try:
-                subprocess.run(
-                    ["python", "scripts/process_investment_data.py"],
-                    check=True,
-                )
-                load_and_preprocess_data.clear()
-                st.success("Investment data updated! Reloading...")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Failed to update investment data: {e}")
+    b_incr, b_full = st.columns(2)
+    with b_incr:
+        if st.button("🔄 Refresh Investment Data", use_container_width=True):
+            run_subprocess_refresh(
+                "scripts/process_investment_data.py",
+                clear_all_caches,
+                "Fetching latest prices (incremental)...",
+            )
+    with b_full:
+        if st.button(
+            "⚠️ Full Rebuild",
+            use_container_width=True,
+            help="Re-fetches ALL historical data from 2016. Takes 5–10 minutes.",
+        ):
+            run_subprocess_refresh(
+                "scripts/process_investment_data.py",
+                clear_all_caches,
+                "Full rebuild in progress (this takes ~5 min)...",
+                full_refresh=True,
+            )
+    st.caption("Incremental: updates prices for today. Full Rebuild: re-fetches all history (fixes corrupt data).")
 
 # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
 st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)

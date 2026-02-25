@@ -1,5 +1,3 @@
-import subprocess
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,11 +7,14 @@ from scripts.data_processing import (
     load_and_preprocess_data,
     load_market_context,
     calculate_buying_opportunity_scores,
+    clear_all_caches,
 )
 from scripts.navigation import make_sidebar
+from scripts.utils import render_refresh_status, run_subprocess_refresh
 
 st.set_page_config(layout="wide", page_title="Buying Opportunities", page_icon="💰")
 make_sidebar("Buying Opportunities")
+render_refresh_status()
 
 # ----------------- LOAD DATA ----------------- #
 data = load_and_preprocess_data()
@@ -36,15 +37,11 @@ with col_title:
 with col_refresh:
     st.markdown("<div style='padding-top: 12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
-        with st.spinner("Fetching latest prices and fundamentals..."):
-            try:
-                subprocess.run(["python", "scripts/process_investment_data.py"], check=True)
-                load_and_preprocess_data.clear()
-                load_market_context.clear()
-                st.success("Data refreshed! Reloading...")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Refresh failed: {e}")
+        run_subprocess_refresh(
+            "scripts/process_investment_data.py",
+            clear_all_caches,
+            "Fetching latest prices and fundamentals...",
+        )
 
 freshness_color = "#e74c3c" if last_updated == "Unknown" else (
     "#f39c12" if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
