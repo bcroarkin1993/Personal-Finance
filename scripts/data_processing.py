@@ -412,29 +412,13 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             todays_stocks_complete = todays_stocks.copy()
 
-    # ----- Market Context (fetched once, cached 1hr, shared with scoring) -----
-    market_ctx = load_market_context()
-    mss = market_ctx["market_sentiment_score"]
-
-    # ----- Buying Ops -----
+    # ----- Buying Ops (deferred to Buying_Opportunities.py) -----
+    # Scoring is computed on demand by Buying_Opportunities.py, which calls
+    # load_market_context() and calculate_buying_opportunity_scores() directly.
+    # Removing it here eliminates 2 yfinance API calls from every cold-start load
+    # on the 8 pages that never consume these values.
     rebuy_df = pd.DataFrame()
     new_buy_df = pd.DataFrame()
-
-    if not stocks_complete.empty and "price" in stocks_complete.columns:
-        rebuy_df = calculate_buying_opportunity_scores(
-            stocks_complete, portfolio_cash=5000, market_sentiment_score=mss
-        )
-
-    # Watchlist logic (requires price + 52_week_high columns from process_investment_data)
-    if not stock_info.empty and not stocks.empty:
-        owned = stocks["stock"].unique() if "stock" in stocks.columns else []
-        watchlist = stock_info[~stock_info["stock"].isin(owned)].copy()
-        if (not watchlist.empty
-                and "price" in watchlist.columns
-                and "52_week_high" in watchlist.columns):
-            new_buy_df = calculate_buying_opportunity_scores(
-                watchlist, market_sentiment_score=mss
-            )
 
     # ----- Aggregates -----
     sector_values = pd.DataFrame()
@@ -465,7 +449,6 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         "cap_sizes": pd.DataFrame(),
         "rebuying_opportunities": rebuy_df,
         "buying_opportunities": new_buy_df,
-        "market_context": market_ctx,
     }
 
 

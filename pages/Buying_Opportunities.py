@@ -19,7 +19,7 @@ render_refresh_status()
 # ----------------- LOAD DATA ----------------- #
 data = load_and_preprocess_data()
 stocks_complete = data.get("stocks_complete", pd.DataFrame())
-market_ctx = data.get("market_context", {})
+market_ctx = load_market_context()
 stock_info = data.get("stock_info", pd.DataFrame())
 stocks = data.get("stocks", pd.DataFrame())
 
