@@ -166,14 +166,17 @@ The current schema has no concept of owner, card, or account on individual trans
 
 ---
 
-### 4. App-Wide Data Freshness
+### 4. App-Wide Data Freshness ✅ *Completed — merged to main*
 
-Identified during the Buying Opportunities work. Every page that displays financial data should make it obvious when that data was last updated and let the user trigger a refresh without going to the Home page.
-
-- [ ] **Audit all pages for staleness risk.** `stock_info.csv` drives fundamentals on Portfolio Overview, Industry & Sector Breakdown, Company Deep-Dive, and Stock Peer Analysis — all can show stale sector/PE/target data. `daily_stocks.csv` drives the trend chart and movers. `expenses.csv` / `income.csv` drive all budget pages. Document the freshness dependency for each page.
-- [ ] **Add a shared `render_freshness_badge()` helper to `scripts/utils.py`.** Takes a DataFrame and a date column, computes age, and renders a small colored badge (green < 1 day, yellow < 7 days, red ≥ 7 days). Call it at the top of every investment page.
-- [ ] **Add Refresh buttons to investment pages** (Portfolio Overview, Industry & Sector, Company Deep-Dive) so users don't have to navigate to Home to trigger `process_investment_data.py`.
-- [ ] **Add a Refresh button to budget pages** (Budget Overview, Expenses, Income) for `process_budget_data.py`, mirroring the pattern already in `main.py`.
+- [x] **Refresh buttons on every page.** All 9 pages now have a Refresh button via `run_subprocess_refresh()`. Investment pages trigger `process_investment_data.py`; budget pages trigger `process_budget_data.py`.
+- [x] **Persistent refresh status messages.** `render_refresh_status()` in `scripts/utils.py` uses `st.session_state` to survive `st.rerun()`. Every page calls it so success/warning/error is always visible.
+- [x] **Absolute script paths.** `run_subprocess_refresh()` resolves paths via `_PROJECT_ROOT` so it works regardless of the directory Streamlit was launched from.
+- [x] **Full Rebuild button on Home page.** Passes `--full` to `process_investment_data.py` to reprocess all historical data from 2016.
+- [x] **Two-layer cache fix.** `clear_all_caches()` clears `load_main_data`, `load_and_preprocess_data`, and `load_market_context` in one call. All Refresh buttons use it.
+- [x] **yfinance upgraded to 1.2.0.** Fixes crumb-poisoning rate limit bug in 0.2.50; uses `curl-cffi` for a more reliable auth flow.
+- [x] **Pre-flight API check.** Script tests one ticker before processing; exits in ~3s with a clear message if Yahoo Finance is rate-limiting.
+- [x] **Circuit breakers + staleness gate.** Each fetch phase stops after 5 consecutive failures. Fundamentals skip tickers updated within the last 23 hours.
+- [x] **Forward-fill missing tickers.** If a ticker has no data for the latest date (Yahoo Finance lag), its last known close is carried forward so the portfolio trend chart isn't artificially depressed.
 
 ---
 
@@ -209,11 +212,11 @@ The two biggest pain points are the initial page load time and how long a full i
 
 - [ ] **Parallelize yfinance fetches in `process_investment_data.py`.** The refresh script fetches each ticker sequentially with a `time.sleep(0.1)` gap — for a 20+ stock portfolio this takes several minutes. Use `concurrent.futures.ThreadPoolExecutor` with a modest limit (e.g. 5 workers) to fetch multiple tickers in parallel while staying within rate limits.
 
-- [ ] **Skip unchanged tickers in `create_stock_info_table`.** Even in incremental mode, fundamentals are re-fetched for every ticker on every run. Add a staleness threshold (e.g. skip tickers whose `Last Updated` is less than 24 hours old) so only genuinely stale entries are re-fetched.
+- [x] **Skip unchanged tickers in `create_stock_info_table`.** `FUNDAMENTALS_STALE_HOURS = 23` threshold skips tickers whose `Last Updated` is less than 23 hours old in incremental mode.
 
 - [ ] **Defer buying opportunity scoring out of `load_and_preprocess_data`.** Scoring runs on every cold cache load, even on pages that never show scores. Move it to a separate `@st.cache_data` function called only by the Buying Opportunities page so all other pages load faster.
 
-- [ ] **Add a `ttl` to `load_and_preprocess_data` cache.** The cache currently never expires on its own — it only clears when a Refresh button is pressed. A `ttl` (e.g. 4 hours) would auto-refresh data for active sessions without manual intervention.
+- [x] **Add a `ttl` to `load_main_data` cache.** Both `load_main_data` and `load_and_preprocess_data` now have `ttl=1800`.
 
 ---
 
