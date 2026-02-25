@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import page_header, section_header, grad_divider, GREEN_PIE_PALETTE
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Industry & Sector Breakdown", page_icon="🧭", layout="wide")
@@ -14,14 +14,6 @@ make_sidebar("Industry & Sector Breakdown")
 
 page_header("Industry & Sector Breakdown", icon="🧭",
             subtitle="Portfolio allocation by sector, industry, and market cap")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 

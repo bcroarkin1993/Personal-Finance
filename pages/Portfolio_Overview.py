@@ -4,13 +4,13 @@ import pandas as pd
 import altair as alt
 import plotly.express as px
 from datetime import date, timedelta
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import (
     GREEN, RED,
     page_header, section_header, stat_card_grid, html_table, grad_divider,
 )
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wide")
@@ -20,14 +20,6 @@ make_sidebar("Portfolio Overview")
 
 page_header("Portfolio Overview", icon="📈",
             subtitle="Holdings value, cost basis, and performance over time")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 
@@ -249,7 +241,7 @@ if "daily_stocks" in data and not daily_stocks.empty:
         col_g, col_l = st.columns(2)
 
         with col_g:
-            st.html(f"<div style='color:#00c853;font-weight:600;margin-bottom:6px;'>Top Gainers ({time_frame})</div>")
+            st.html(f"<div style='color:#333;font-weight:600;margin-bottom:6px;'>Top Gainers ({time_frame})</div>")
             gainers = perf_df.sort_values("Pct_Change", ascending=False).head(10)
             st.html(html_table(
                 gainers,
@@ -260,7 +252,7 @@ if "daily_stocks" in data and not daily_stocks.empty:
             ))
 
         with col_l:
-            st.html(f"<div style='color:#00c853;font-weight:600;margin-bottom:6px;'>Top Losers ({time_frame})</div>")
+            st.html(f"<div style='color:#333;font-weight:600;margin-bottom:6px;'>Top Losers ({time_frame})</div>")
             losers = perf_df.sort_values("Pct_Change", ascending=True).head(10)
             st.html(html_table(
                 losers,

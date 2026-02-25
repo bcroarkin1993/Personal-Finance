@@ -6,7 +6,6 @@ from scripts.data_processing import (
     load_and_preprocess_data,
     load_market_context,
     calculate_buying_opportunity_scores,
-    clear_all_caches,
 )
 from scripts.navigation import make_sidebar
 from scripts.theme import (
@@ -14,7 +13,7 @@ from scripts.theme import (
     page_header, section_header, stat_card_grid, stat_card, progress_bar,
     score_badge, html_table, grad_divider,
 )
-from scripts.utils import render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_refresh_status
 
 st.set_page_config(layout="wide", page_title="Buying Opportunities", page_icon="💰")
 make_sidebar("Buying Opportunities")
@@ -37,14 +36,6 @@ if not stock_info.empty and "last_updated" in stock_info.columns:
 
 page_header("Buying Opportunities", icon="💰",
             subtitle="Data-driven scoring engine for re-buying and new positions")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 freshness_color = RED if last_updated == "Unknown" else (
     YELLOW if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
@@ -252,7 +243,7 @@ with tab1:
             upside_html = ""
             if upside_pct > 0:
                 upside_html = (
-                    f"<div style='margin-top:6px;font-size:0.8rem;color:#388e3c;'>"
+                    f"<div style='margin-top:6px;font-size:0.8rem;color:#333;'>"
                     f"Analyst target: ${target:,.2f} ({upside_pct:+.1f}% upside)</div>"
                 )
 

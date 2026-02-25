@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import date
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import (
     page_header, section_header, stat_card_grid, html_table, badge, grad_divider,
     GREEN_PIE_PALETTE,
 )
-from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Expense Breakdown", page_icon="🧾", layout="wide")
@@ -18,14 +18,6 @@ make_sidebar("Expense Breakdown")
 
 page_header("Expense Breakdown", icon="🧾",
             subtitle="Spending patterns by category and description")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_budget_data.py",
-            clear_all_caches,
-            "Processing Budget.xlsx...",
-        )
 
 render_refresh_status()
 

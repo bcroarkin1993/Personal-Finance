@@ -3,10 +3,10 @@ import pandas as pd
 import plotly.express as px
 import random
 from datetime import datetime, timedelta
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import BLUE, GREEN_VIVID, page_header, section_header, grad_divider
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Company Deep Dive", page_icon="🏢", layout="wide")
@@ -16,14 +16,6 @@ make_sidebar("Company Deep-Dive")
 
 page_header("Company Deep-Dive", icon="🏢",
             subtitle="Detailed financials and analyst data for individual stocks")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 
@@ -102,7 +94,7 @@ with col_profile:
     st.html(f"""
     <div style='background:#0d1f12;border:1px solid #1b5e20;border-radius:10px;padding:14px 18px;margin-bottom:8px;'>
       <div style='color:#fff;font-size:1.6rem;font-weight:700;'>{selected_ticker}</div>
-      <div style='color:#388e3c;font-size:0.85rem;margin-top:2px;'>{sector} | {industry}</div>
+      <div style='color:#a5d6a7;font-size:0.85rem;margin-top:2px;'>{sector} | {industry}</div>
     </div>
     """)
 

@@ -9,10 +9,10 @@ import pandas as pd
 import streamlit as st
 from PIL import Image
 
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import page_header, section_header, grad_divider
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 st.set_page_config(page_title="Holdings Leaderboard", page_icon="🏆", layout="wide")
 
@@ -20,14 +20,6 @@ make_sidebar("Holdings Leaderboard")
 
 page_header("Holdings Leaderboard", icon="🏆",
             subtitle="Top holdings by portfolio value with company logos, market cap, and sector")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 

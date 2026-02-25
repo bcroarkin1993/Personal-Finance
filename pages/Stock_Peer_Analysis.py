@@ -4,29 +4,21 @@ import pandas as pd
 import altair as alt
 import streamlit as st
 
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
 from scripts.theme import RED, GREEN_VIVID, page_header, section_header, grad_divider
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 st.set_page_config(page_title="Stock Peer Analysis", page_icon="📊", layout="wide")
 make_sidebar("Stock Peer Analysis")
 
 page_header("Stock Peer Analysis", icon="📊",
             subtitle="Compare owned stocks against industry peers")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices...",
-        )
 
 render_refresh_status()
 
 st.html("""
-<div style='color:#388e3c;font-size:0.9rem;margin-bottom:8px;'>
+<div style='color:#333;font-size:0.9rem;margin-bottom:8px;'>
   Compare your holdings against each other over different time horizons.
   Prices are normalized so they all start at 1, making relative performance easy to see.
 </div>
@@ -256,7 +248,7 @@ for i, ticker in enumerate(tickers):
         {
             "Date":  normalized.index,
             "Delta": normalized[ticker] - peer_avg,
-        }
+1)         }
     )
 
     delta_chart = (
