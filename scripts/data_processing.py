@@ -335,7 +335,12 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         stock_names = stocks[["stock", "company"]].drop_duplicates()
 
     if not stocks.empty and not stock_info.empty:
-        stocks_complete = pd.merge(stocks, stock_info, how="left", on="stock")
+        # Drop columns from stock_info that already exist in stocks (price, 52_week_high, etc.)
+        # to prevent pandas from creating _x/_y suffixes that break the scoring function.
+        # Owned stocks get authoritative values from stocks.csv; stock_info supplies fundamentals.
+        overlap = [c for c in stock_info.columns if c in stocks.columns and c != "stock"]
+        si_for_merge = stock_info.drop(columns=overlap, errors="ignore")
+        stocks_complete = pd.merge(stocks, si_for_merge, how="left", on="stock")
     else:
         stocks_complete = stocks.copy()
 
