@@ -83,7 +83,7 @@ def make_sidebar(current_page_id):
     # Invest
     invest_opts = [
         "Portfolio Overview", "Industry & Sector Breakdown", "Company Deep-Dive",
-        "Buying Opportunities", "Peer Analysis", "Holdings Leaderboard"
+        "Buying Opportunities", "Stock Peer Analysis", "Holdings Leaderboard"
     ]
     try:
         i_index = invest_opts.index(st.session_state["current_page"])

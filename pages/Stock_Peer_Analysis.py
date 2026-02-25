@@ -239,13 +239,14 @@ if len(tickers) <= 1:
     st.info("Pick 2 or more tickers above to see peer comparisons.", icon="ℹ️")
     st.stop()
 
-NUM_COLS = 4
-grid_cols = st.columns(NUM_COLS)
-
 for i, ticker in enumerate(tickers):
     # Calculate peer average (excluding current stock)
     peers = normalized.drop(columns=[ticker])
     peer_avg = peers.mean(axis=1)
+
+    # Each ticker gets its own full-width row split into 2 columns so
+    # charts have enough room for titles and axis labels.
+    row_cols = st.columns(2)
 
     # Data for normalized vs peer average chart
     plot_data = pd.DataFrame(
@@ -273,11 +274,11 @@ for i, ticker in enumerate(tickers):
                 alt.Tooltip("Price:Q", title="Normalized Price", format=".2f"),
             ],
         )
-        .properties(title=f"{ticker} vs peer average", height=260)
+        .properties(title=f"{ticker} vs peer average", height=340)
+        .configure_title(anchor="start", dy=-5)
     )
 
-    cell = grid_cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.altair_chart(line_chart, use_container_width=True)
+    row_cols[0].container(border=True).altair_chart(line_chart, use_container_width=True)
 
     # Delta chart: stock - peer average
     delta_data = pd.DataFrame(
@@ -298,11 +299,10 @@ for i, ticker in enumerate(tickers):
                 alt.Tooltip("Delta:Q", title="Delta", format=".2f"),
             ],
         )
-        .properties(title=f"{ticker} minus peer average", height=260)
+        .properties(title=f"{ticker} minus peer average", height=340)
     )
 
-    cell_delta = grid_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell_delta.altair_chart(delta_chart, use_container_width=True)
+    row_cols[1].container(border=True).altair_chart(delta_chart, use_container_width=True)
 
 st.markdown("---")
 st.caption("Prices are based on your stored daily close data and normalized to start at 1 for the selected period.")
