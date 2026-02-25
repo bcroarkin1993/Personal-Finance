@@ -92,6 +92,10 @@ STOCK_INFO_COLUMN_MAP = {
     "Compensation Risk": "compensation_risk",
     "Shareholder Rights Risk": "shareholder_rights_risk",
     "Overall Risk": "overall_risk",
+    "Price": "price",
+    "52 Week High": "52_week_high",
+    "52 Week Low":  "52_week_low",
+    "RSI 14":       "rsi_14",
     "Target High Price": "target_high_price",
     "Target Low Price": "target_low_price",
     "Target Mean Price": "target_mean_price",
@@ -191,18 +195,34 @@ def load_market_context() -> Dict[str, float]:
     }
 
 
+# ----- HELPERS -----
+
+def _compute_rsi(closes: pd.Series, period: int = 14) -> float:
+    """Wilder's RSI computed from a Series of closing prices.
+    Returns 50.0 (neutral) when fewer than period+1 data points are available."""
+    if len(closes) < period + 1:
+        return 50.0
+    delta = closes.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1 / period, adjust=False).mean()
+    loss = (-delta.clip(upper=0)).ewm(alpha=1 / period, adjust=False).mean()
+    rs = gain / loss.replace(0, 1e-10)
+    return float((100 - 100 / (1 + rs)).iloc[-1])
+
+
 # ----- SCORING LOGIC -----
 
 def calculate_buying_opportunity_scores(
     df: pd.DataFrame,
     portfolio_cash: float = 0,
     market_sentiment_score: Optional[float] = None,
-    w_52wk: float = 0.25,
-    w_diversity: float = 0.20,
-    w_target: float = 0.20,
-    w_risk: float = 0.15,
-    w_sentiment: float = 0.15,
-    w_cash: float = 0.05,
+    w_52wk:      float = 0.20,
+    w_target:    float = 0.15,
+    w_rsi:       float = 0.15,
+    w_pe:        float = 0.15,
+    w_risk:      float = 0.15,
+    w_sentiment: float = 0.10,
+    w_diversity: float = 0.05,
+    w_cash:      float = 0.05,
 ) -> pd.DataFrame:
     """
     Scores stocks on a 0-100 composite scale.
@@ -232,19 +252,36 @@ def calculate_buying_opportunity_scores(
     df["52_week_low"] = pd.to_numeric(df["52_week_low"], errors="coerce").fillna(df["price"])
     df["target_mean_price"] = pd.to_numeric(df["target_mean_price"], errors="coerce").fillna(df["price"])
 
-    if "portfolio_diversity" not in df.columns:
-        df["portfolio_diversity"] = 0
-    df["portfolio_diversity"] = pd.to_numeric(df["portfolio_diversity"], errors="coerce").fillna(0)
-
-    # Individual signal scores (each 0-1)
+    # --- 52-Week Discount (per-stock: how far below its own 52W high) ---
     df["discount_pct"] = (df["52_week_high"] - df["price"]) / df["52_week_high"].replace(0, 1)
     df["score_52wk"] = (df["discount_pct"] / 0.50).clip(0, 1).fillna(0)
 
-    df["score_diversity"] = 1 - (df["portfolio_diversity"] / 100).clip(0, 1)
-
+    # --- Analyst Target Upside ---
     target_upside = (df["target_mean_price"] - df["price"]) / df["price"].replace(0, 1)
     df["score_target"] = target_upside.clip(0, 1)
 
+    # --- RSI (per-stock momentum: lower RSI = more oversold = higher score) ---
+    if "rsi_14" in df.columns:
+        df["rsi_14"] = pd.to_numeric(df["rsi_14"], errors="coerce").fillna(50)
+    else:
+        df["rsi_14"] = 50.0
+    df["score_rsi"] = (1 - df["rsi_14"] / 100).clip(0, 1)
+    # RSI=30 → 0.70, RSI=50 → 0.50, RSI=70 → 0.30
+
+    # --- Industry-Relative PE (per-stock valuation vs sector peers) ---
+    if "pe_ratio" in df.columns and "industry" in df.columns:
+        df["pe_ratio"] = pd.to_numeric(df["pe_ratio"], errors="coerce")
+        industry_median = df.groupby("industry")["pe_ratio"].transform("median")
+        valid = (df["pe_ratio"] > 0) & (industry_median > 0)
+        df["score_pe"] = 0.5  # neutral for: negative PE, missing data, growth stocks
+        df.loc[valid, "score_pe"] = (
+            1 - df.loc[valid, "pe_ratio"] / (2 * industry_median[valid])
+        ).clip(0, 1)
+        # PE = industry median → 0.50, PE → 0 → 1.0, PE = 2× median → 0.0
+    else:
+        df["score_pe"] = 0.5
+
+    # --- Governance Risk ---
     risk_cols = ["audit_risk", "board_risk", "compensation_risk", "shareholder_rights_risk"]
     for c in risk_cols:
         if c not in df.columns:
@@ -252,19 +289,28 @@ def calculate_buying_opportunity_scores(
     df["avg_risk"] = df[risk_cols].mean(axis=1)
     df["score_risk"] = (1 - (df["avg_risk"] / 10)).clip(0, 1)
 
-    # Market sentiment is the same for all rows — store for display
+    # --- Market Sentiment (global: same score for all rows) ---
     df["score_sentiment"] = float(market_sentiment_score)
 
-    cash_bonus = min(portfolio_cash / 10000, 1.0)
+    # --- Portfolio Diversity (neutral=50 for watchlist stocks that aren't owned) ---
+    if "portfolio_diversity" not in df.columns:
+        df["portfolio_diversity"] = 50
+    df["portfolio_diversity"] = pd.to_numeric(df["portfolio_diversity"], errors="coerce").fillna(50)
+    df["score_diversity"] = (1 - (df["portfolio_diversity"] / 100)).clip(0, 1)
+
+    # --- Cash Bonus (global: cap raised from $10k to $50k) ---
+    cash_bonus = min(portfolio_cash / 50000, 1.0)
     df["score_cash"] = cash_bonus
 
     df["buy_score"] = (
-        (w_52wk      * df["score_52wk"]) +
-        (w_diversity  * df["score_diversity"]) +
-        (w_target     * df["score_target"]) +
-        (w_risk       * df["score_risk"]) +
-        (w_sentiment  * df["score_sentiment"]) +
-        (w_cash       * df["score_cash"])
+        w_52wk      * df["score_52wk"]      +
+        w_target    * df["score_target"]    +
+        w_rsi       * df["score_rsi"]       +
+        w_pe        * df["score_pe"]        +
+        w_risk      * df["score_risk"]      +
+        w_sentiment * df["score_sentiment"] +
+        w_diversity * df["score_diversity"] +
+        w_cash      * df["score_cash"]
     ) * 100
 
     return df.sort_values("buy_score", ascending=False)
@@ -303,9 +349,36 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         stock_names = stocks[["stock", "company"]].drop_duplicates()
 
     if not stocks.empty and not stock_info.empty:
-        stocks_complete = pd.merge(stocks, stock_info, how="left", on="stock")
+        # Drop columns from stock_info that already exist in stocks (price, 52_week_high, etc.)
+        # to prevent pandas from creating _x/_y suffixes that break the scoring function.
+        # Owned stocks get authoritative values from stocks.csv; stock_info supplies fundamentals.
+        overlap = [c for c in stock_info.columns if c in stocks.columns and c != "stock"]
+        si_for_merge = stock_info.drop(columns=overlap, errors="ignore")
+        stocks_complete = pd.merge(stocks, si_for_merge, how="left", on="stock")
     else:
         stocks_complete = stocks.copy()
+
+    # Compute RSI per ticker from daily_stocks price history — no API calls needed.
+    # Owned stocks get real 14-day RSI; watchlist stocks default to 50 (neutral) in scoring.
+    if (not daily_stocks.empty
+            and "stock" in daily_stocks.columns
+            and "close" in daily_stocks.columns
+            and not stocks_complete.empty
+            and "stock" in stocks_complete.columns):
+        rsi_rows = []
+        sort_col = "date" if "date" in daily_stocks.columns else None
+        for ticker, grp in daily_stocks.groupby("stock"):
+            closes = (
+                grp.sort_values(sort_col)["close"].reset_index(drop=True)
+                if sort_col else grp["close"].reset_index(drop=True)
+            )
+            rsi_rows.append({"stock": ticker, "rsi_14": round(_compute_rsi(closes), 2)})
+        if rsi_rows:
+            rsi_df = pd.DataFrame(rsi_rows)
+            if "rsi_14" in stocks_complete.columns:
+                stocks_complete = stocks_complete.drop(columns=["rsi_14"])
+            stocks_complete = stocks_complete.merge(rsi_df, on="stock", how="left")
+            stocks_complete["rsi_14"] = stocks_complete["rsi_14"].fillna(50.0)
 
     # Add invested column if missing
     if "invested" not in stocks_complete.columns and "quantity" in stocks_complete.columns:
@@ -352,11 +425,13 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
             stocks_complete, portfolio_cash=5000, market_sentiment_score=mss
         )
 
-    # Watchlist logic (requires a 'price' column in stock_info — added by process_investment_data)
+    # Watchlist logic (requires price + 52_week_high columns from process_investment_data)
     if not stock_info.empty and not stocks.empty:
         owned = stocks["stock"].unique() if "stock" in stocks.columns else []
         watchlist = stock_info[~stock_info["stock"].isin(owned)].copy()
-        if "price" in watchlist.columns:
+        if (not watchlist.empty
+                and "price" in watchlist.columns
+                and "52_week_high" in watchlist.columns):
             new_buy_df = calculate_buying_opportunity_scores(
                 watchlist, market_sentiment_score=mss
             )

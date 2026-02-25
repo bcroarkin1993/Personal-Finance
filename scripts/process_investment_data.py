@@ -446,8 +446,16 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
     tickers_to_fetch = list(stock_dict.keys())
     fresh_tickers = set()
 
+    # Schema-migration guard: if new columns are missing, re-fetch everything
+    # regardless of freshness so the new data gets written on the next incremental run.
+    REQUIRED_COLS = {"52 Week High", "52 Week Low"}
+    schema_outdated = not existing_df.empty and not REQUIRED_COLS.issubset(set(existing_df.columns))
+    if schema_outdated:
+        print(f"     stock_info.csv is missing new columns "
+              f"({REQUIRED_COLS - set(existing_df.columns)}) — re-fetching all tickers.")
+
     # Skip tickers with fresh fundamentals in incremental mode
-    if not full_refresh and not existing_df.empty and "Last Updated" in existing_df.columns:
+    if not full_refresh and not schema_outdated and not existing_df.empty and "Last Updated" in existing_df.columns:
         try:
             now = pd.Timestamp.now()
             ages_h = (
@@ -494,8 +502,10 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
             def get(key, default=0):
                 return info.get(key, default)
 
-            # Current price from fast_info (lighter endpoint than quoteSummary)
+            # Current price + 52W range from fast_info
             price = 0
+            week_high_52 = 0
+            week_low_52 = 0
             try:
                 fi = yf.Ticker(ticker).fast_info
                 price = float(
@@ -503,6 +513,8 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
                     getattr(fi, "previous_close", None) or
                     get("currentPrice", 0)
                 )
+                week_high_52 = getattr(fi, "year_high", None) or 0
+                week_low_52 = getattr(fi, "year_low", None) or 0
             except Exception:
                 price = float(get("currentPrice", 0))
 
@@ -530,6 +542,8 @@ def create_stock_info_table(stock_dict, csv_path, full_refresh=False):
                 "Shareholder Rights Risk": get("shareHolderRightsRisk", 5),
                 "Overall Risk": get("overallRisk", 5),
                 "Price": price,
+                "52 Week High": week_high_52,
+                "52 Week Low":  week_low_52,
             }
 
             data_list.append(row)
