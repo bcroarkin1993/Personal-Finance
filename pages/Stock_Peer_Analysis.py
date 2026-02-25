@@ -273,7 +273,7 @@ for i, ticker in enumerate(tickers):
                 alt.Tooltip("Price:Q", title="Normalized Price", format=".2f"),
             ],
         )
-        .properties(title=f"{ticker} vs peer average", height=260)
+        .properties(title=alt.TitleParams(text=f"{ticker} vs peer average", limit=0), height=260)
     )
 
     cell = grid_cols[(i * 2) % NUM_COLS].container(border=True)
@@ -298,7 +298,7 @@ for i, ticker in enumerate(tickers):
                 alt.Tooltip("Delta:Q", title="Delta", format=".2f"),
             ],
         )
-        .properties(title=f"{ticker} minus peer average", height=260)
+        .properties(title=alt.TitleParams(text=f"{ticker} minus peer average", limit=0), height=260)
     )
 
     cell_delta = grid_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
