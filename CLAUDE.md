@@ -98,7 +98,7 @@ data/*.csv  (all CSVs)
 ### Key Modules
 
 - **`main.py`** — Home page / dashboard. Loads preprocessed data and renders summary metrics and portfolio trend chart.
-- **`scripts/data_processing.py`** — Central data layer. `load_and_preprocess_data()` (cached) reads all CSVs, merges stocks with fundamentals, computes daily equity, sector aggregates, and buying opportunity scores. All pages call this function.
+- **`scripts/data_processing.py`** — Central data layer. `load_and_preprocess_data()` (cached) reads all CSVs, merges stocks with fundamentals, computes daily equity, sector aggregates, buying opportunity scores, and 14-day RSI (from `daily_stocks.csv` — no API). All pages call this function.
 - **`scripts/process_investment_data.py`** — Standalone script. Replays transaction history from `stock_dictionary.json` to compute current holdings, fetches yfinance for prices and fundamentals, and saves to CSV.
 - **`scripts/process_budget_data.py`** — Standalone script. Parses the Budget Excel workbook (sheets named `Monthly Budget *` and `Budget v Actual`) and saves to CSV.
 - **`scripts/navigation.py`** — Custom sidebar navigation with three radio groups (Home, Budget, Investments). Every page must call `make_sidebar("<PageId>")` as its first UI step.
@@ -154,15 +154,17 @@ The current schema has no concept of owner, card, or account on individual trans
 
 ---
 
-### 3. Buying Opportunities Enhancement
+### 3. Buying Opportunities Enhancement ✅ *Completed — merged to main*
 
 - [x] **Surface individual score components in the UI.** Breakdown table now shows `score_52wk`, `score_target`, `score_diversity`, `score_risk`, `score_sentiment` alongside the final `buy_score`.
 - [x] **Make score weights user-configurable.** `calculate_buying_opportunity_scores` now accepts `w_*` weight parameters. The page exposes sliders that re-score live without any extra API calls.
 - [x] **Cache VIX/S&P 500 fetch separately.** Extracted into `load_market_context()` with `@st.cache_data(ttl=3600)`. Scoring function accepts `market_sentiment_score` as a parameter; the page passes the cached value when re-scoring with custom weights.
 - [x] **Add data freshness banner and Refresh button to Buying Opportunities page.** Shows `Last Updated` from `stock_info.csv` with a color indicator (green/yellow/red). Refresh button triggers `process_investment_data.py` and clears both data caches.
 - [x] **Add market context strip.** Page displays current VIX, S&P 1-month return, and composite sentiment score at the top.
-- [ ] **Fix the New Opportunities (Watchlist) tab.** Still needs `process_investment_data.py` to store a `Price` column in `stock_info.csv` for non-owned tickers. Page is ready to display it once the data exists.
-- [ ] **Add RSI as a scoring signal.** Compute 14-day RSI in `process_investment_data.py`, store in `stock_info.csv`, add `score_rsi` (high when RSI < 40) as an optional weight in `calculate_buying_opportunity_scores`.
+- [x] **Fix the New Opportunities (Watchlist) tab.** `process_investment_data.py` now writes `52 Week High` and `52 Week Low` to `stock_info.csv`. Schema-migration guard in `create_stock_info_table` detects missing columns and forces a re-fetch on the next incremental run. Watchlist scoring guard updated to require `52_week_high`.
+- [x] **Add RSI as a scoring signal.** 14-day RSI computed in `data_processing.py` directly from `daily_stocks.csv` price history — no API calls. Owned stocks get real RSI; watchlist stocks default to 50 (neutral). `score_rsi` added as a user-configurable weight (default 15%).
+- [x] **Scoring overhaul (8-signal engine).** `calculate_buying_opportunity_scores` expanded to 8 signals: 52-Week Discount (20%), Analyst Target Upside (15%), RSI Oversold (15%), Industry-Relative PE (15%), Governance Risk (15%), Market Sentiment (10%), Portfolio Diversity (5%), Cash Bonus (5%). New default weights sum to 100%. Cash cap raised from $10k to $50k. Portfolio Diversity neutral default changed from 0→50 for watchlist stocks (was artificially inflating their scores). Industry-relative PE scores each stock vs. its sector median; negative/missing PE defaults to 0.5 (neutral — fair to growth stocks).
+- [x] **Fix merge collision between `stocks` and `stock_info`.** Added `Price`, `52 Week High`, `52 Week Low` to `STOCK_INFO_COLUMN_MAP`. To prevent pandas `_x`/`_y` column suffixes when both DataFrames share column names, overlapping columns are now dropped from `stock_info` before the left join. Owned stocks keep authoritative values from `stocks.csv`; the merge brings in fundamentals only.
 
 ---
 
