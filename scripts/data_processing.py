@@ -195,6 +195,20 @@ def load_market_context() -> Dict[str, float]:
     }
 
 
+# ----- HELPERS -----
+
+def _compute_rsi(closes: pd.Series, period: int = 14) -> float:
+    """Wilder's RSI computed from a Series of closing prices.
+    Returns 50.0 (neutral) when fewer than period+1 data points are available."""
+    if len(closes) < period + 1:
+        return 50.0
+    delta = closes.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1 / period, adjust=False).mean()
+    loss = (-delta.clip(upper=0)).ewm(alpha=1 / period, adjust=False).mean()
+    rs = gain / loss.replace(0, 1e-10)
+    return float((100 - 100 / (1 + rs)).iloc[-1])
+
+
 # ----- SCORING LOGIC -----
 
 def calculate_buying_opportunity_scores(
@@ -343,6 +357,28 @@ def preprocess_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         stocks_complete = pd.merge(stocks, si_for_merge, how="left", on="stock")
     else:
         stocks_complete = stocks.copy()
+
+    # Compute RSI per ticker from daily_stocks price history — no API calls needed.
+    # Owned stocks get real 14-day RSI; watchlist stocks default to 50 (neutral) in scoring.
+    if (not daily_stocks.empty
+            and "stock" in daily_stocks.columns
+            and "close" in daily_stocks.columns
+            and not stocks_complete.empty
+            and "stock" in stocks_complete.columns):
+        rsi_rows = []
+        sort_col = "date" if "date" in daily_stocks.columns else None
+        for ticker, grp in daily_stocks.groupby("stock"):
+            closes = (
+                grp.sort_values(sort_col)["close"].reset_index(drop=True)
+                if sort_col else grp["close"].reset_index(drop=True)
+            )
+            rsi_rows.append({"stock": ticker, "rsi_14": round(_compute_rsi(closes), 2)})
+        if rsi_rows:
+            rsi_df = pd.DataFrame(rsi_rows)
+            if "rsi_14" in stocks_complete.columns:
+                stocks_complete = stocks_complete.drop(columns=["rsi_14"])
+            stocks_complete = stocks_complete.merge(rsi_df, on="stock", how="left")
+            stocks_complete["rsi_14"] = stocks_complete["rsi_14"].fillna(50.0)
 
     # Add invested column if missing
     if "invested" not in stocks_complete.columns and "quantity" in stocks_complete.columns:
