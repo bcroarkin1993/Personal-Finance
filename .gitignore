@@ -10,8 +10,8 @@ venv/
 # Ignore PyCharm temporary files
 .idea/
 
-# Ignore Streamlit temporary files
-.streamlit/
+# Ignore Streamlit secrets (never commit API keys) but track config.toml
+.streamlit/secrets.toml
 
 # Ignore Python cache and compiled files
 __pycache__/
