@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import random  # Added for random selection
+import random
 from datetime import datetime, timedelta
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
-from scripts.theme import BLUE, page_header
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.theme import BLUE, GREEN_VIVID, page_header, section_header, grad_divider
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Company Deep Dive", page_icon="🏢", layout="wide")
@@ -16,35 +16,23 @@ make_sidebar("Company Deep-Dive")
 
 page_header("Company Deep-Dive", icon="🏢",
             subtitle="Detailed financials and analyst data for individual stocks")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 
 # ----------------- DATA LOADING ----------------- #
 data = load_and_preprocess_data()
-stock_info = data["stock_info"].copy()
+stock_info   = data["stock_info"].copy()
 daily_stocks = data["daily_stocks"].copy()
 
-# Freshness badge
 if not stock_info.empty and "last_updated" in stock_info.columns:
     render_freshness_badge(pd.to_datetime(stock_info["last_updated"]).max(), label="Fundamentals last updated")
 
-# Ensure we have a clean list of companies
-# We want to pick by "Company Name (Ticker)" for readability
 stock_info["display_name"] = stock_info["company"] + " (" + stock_info["stock"] + ")"
 company_map = dict(zip(stock_info["display_name"], stock_info["stock"]))
 
 # ----------------- SELECTOR ----------------- #
 options = sorted(company_map.keys())
 
-# Randomly select a default index if options exist
 if options:
     default_index = random.randint(0, len(options) - 1)
 else:
@@ -55,8 +43,6 @@ selected_display = st.selectbox("Select a Company:", options=options, index=defa
 if selected_display:
     selected_ticker = company_map[selected_display]
 
-    # Filter Data
-    # Handle case where stock might be in map but not in filtered df
     if not stock_info[stock_info["stock"] == selected_ticker].empty:
         company_data = stock_info[stock_info["stock"] == selected_ticker].iloc[0]
         history_data = daily_stocks[daily_stocks["stock"] == selected_ticker].copy()
@@ -69,14 +55,9 @@ else:
 
 # ----------------- HELPER: SECTOR CONTEXT ----------------- #
 def get_comparative_metric(df, sector, metric_col, current_val, inverse=False):
-    """
-    Compares the current company's metric against the median of its sector.
-    inverse=True means 'Lower is Better' (e.g., PE Ratio).
-    """
     if current_val == 0 or pd.isna(current_val):
-        return "N/A", "off"  # FIX: Return 'off' instead of None
+        return "N/A", "off"
 
-    # Filter for sector peers
     peers = df[df["sector"] == sector]
 
     if len(peers) < 3:
@@ -88,9 +69,8 @@ def get_comparative_metric(df, sector, metric_col, current_val, inverse=False):
     median_val = peers[metric_col].median()
 
     if median_val == 0 or pd.isna(median_val):
-        return "N/A", "off"  # FIX: Return 'off' instead of None
+        return "N/A", "off"
 
-    # Calculate difference
     diff = current_val - median_val
 
     if inverse:
@@ -102,68 +82,63 @@ def get_comparative_metric(df, sector, metric_col, current_val, inverse=False):
 
 
 # ----------------- SECTION 1: PROFILE & CHART ----------------- #
+st.html(grad_divider())
 col_profile, col_chart = st.columns([1, 2])
 
 with col_profile:
-    st.subheader("Company Profile")
+    st.html(section_header("Company Profile", icon="🏢"))
 
-    # Logo / Ticker Header
-    st.markdown(f"## **{selected_ticker}**")
-    st.caption(f"{company_data.get('sector', 'N/A')} | {company_data.get('industry', 'N/A')}")
+    # Ticker header inside a styled card div
+    sector   = str(company_data.get("sector", "N/A"))
+    industry = str(company_data.get("industry", "N/A"))
+    st.html(f"""
+    <div style='background:#0d1f12;border:1px solid #1b5e20;border-radius:10px;padding:14px 18px;margin-bottom:8px;'>
+      <div style='color:#fff;font-size:1.6rem;font-weight:700;'>{selected_ticker}</div>
+      <div style='color:#a5d6a7;font-size:0.85rem;margin-top:2px;'>{sector} | {industry}</div>
+    </div>
+    """)
 
-    st.markdown("---")
-
-    # Key Personnel & Loc
     st.markdown(f"**CEO:** {company_data.get('ceo', 'N/A')}")
     st.markdown(
         f"**HQ:** {company_data.get('city', '')}, {company_data.get('state', '')}, {company_data.get('country', '')}")
     st.markdown(f"**Employees:** {company_data.get('full_time_employees', 'N/A')}")
-    st.markdown(f"**Description:**")
+    st.markdown("**Description:**")
     st.markdown(f"*{str(company_data.get('description', 'No description available.'))[:400]}...*")
 
     with st.expander("Read Full Description"):
         st.write(company_data.get('description', ''))
 
 with col_chart:
-    st.subheader("Price History (1 Year)")
+    st.html(section_header("Price History (1 Year)", icon="📉"))
 
     if not history_data.empty:
         history_data["date"] = pd.to_datetime(history_data["date"])
-        # Filter to last 365 days for relevance
         one_year_ago = datetime.now() - timedelta(days=365)
         chart_df = history_data[history_data["date"] >= one_year_ago].sort_values("date")
 
-        fig = px.line(
-            chart_df,
-            x="date",
-            y="close",
-            title=f"{selected_ticker} Stock Price",
-        )
-        # Add area shading
-        fig.update_traces(fill='tozeroy', line_color=BLUE)
+        fig = px.line(chart_df, x="date", y="close", title=f"{selected_ticker} Stock Price")
+        fig.update_traces(fill='tozeroy', line_color=GREEN_VIVID)
         fig.update_layout(xaxis_title=None, yaxis_title="Price ($)")
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No historical price data available.")
 
-st.markdown("---")
-
 # ----------------- SECTION 2: FUNDAMENTAL SCORECARD ----------------- #
-st.subheader("📊 Fundamental Scorecard")
-st.caption("Metrics compared against the median of other companies in the same sector.")
+st.html(grad_divider())
+st.html(section_header("Fundamental Scorecard", icon="📊",
+                        subtitle="Metrics compared against the median of other companies in the same sector."))
 
-# Prepare Metrics
 metrics_config = [
-    ("P/E Ratio", "pe_ratio", True),
-    ("P/B Ratio", "pb_ratio", True),
-    ("Beta (Volatility)", "beta", True),
-    ("Dividend Yield", "dividend_yield", False),
-    ("Profit Margins", "profit_margins", False),
-    ("Market Cap (B)", "market_cap", False)
+    ("P/E Ratio",         "pe_ratio",          True),
+    ("P/B Ratio",         "pb_ratio",          True),
+    ("Beta (Volatility)", "beta",              True),
+    ("Dividend Yield",    "dividend_yield",    False),
+    ("Profit Margins",    "profit_margins",    False),
+    ("Market Cap (B)",    "market_cap",        False),
 ]
 
-m_cols = st.columns(len(metrics_config))
-sector = company_data.get("sector", "")
+m_cols  = st.columns(len(metrics_config))
+sector  = company_data.get("sector", "")
 
 for i, (label, col_name, is_inverse) in enumerate(metrics_config):
     with m_cols[i]:
@@ -172,18 +147,17 @@ for i, (label, col_name, is_inverse) in enumerate(metrics_config):
         if col_name in stock_info.columns:
             comp_text, color_mode = get_comparative_metric(stock_info, sector, col_name, val, is_inverse)
 
-            # Formatting
             if col_name in ["dividend_yield", "profit_margins"]:
                 fmt_val = f"{val * 100:.2f}%" if pd.notnull(val) else "N/A"
             else:
                 fmt_val = f"{val:.2f}" if pd.notnull(val) else "N/A"
 
-            # Calculate numeric delta for Streamlit
             peers = stock_info[stock_info["sector"] == sector]
-            if len(peers) < 3: peers = stock_info
+            if len(peers) < 3:
+                peers = stock_info
 
             if pd.notnull(val) and not peers[col_name].isnull().all():
-                median = peers[col_name].median()
+                median       = peers[col_name].median()
                 numeric_delta = (val - median)
             else:
                 numeric_delta = None
@@ -198,15 +172,13 @@ for i, (label, col_name, is_inverse) in enumerate(metrics_config):
         else:
             st.metric(label, "N/A")
 
-st.markdown("---")
-
 # ----------------- SECTION 3: RISK & ANALYST RATINGS ----------------- #
+st.html(grad_divider())
 r1, r2 = st.columns(2)
 
 with r1:
-    st.subheader("⚠️ Risk Profile")
-    risk_cols = ["audit_risk", "board_risk", "compensation_risk", "shareholder_rights_risk"]
-
+    st.html(section_header("Risk Profile", icon="⚠️"))
+    risk_cols    = ["audit_risk", "board_risk", "compensation_risk", "shareholder_rights_risk"]
     current_risks = {k: company_data.get(k, 0) for k in risk_cols}
 
     risk_df = pd.DataFrame(dict(
@@ -223,8 +195,8 @@ with r1:
         st.info("No detailed risk data available.")
 
 with r2:
-    st.subheader("🎯 Analyst Consensus")
-    target_mean = company_data.get("target_mean_price", 0)
+    st.html(section_header("Analyst Consensus", icon="🎯"))
+    target_mean   = company_data.get("target_mean_price", 0)
     current_price = history_data.iloc[-1]["close"] if not history_data.empty else 0
 
     if target_mean > 0 and current_price > 0:

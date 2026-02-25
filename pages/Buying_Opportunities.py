@@ -1,17 +1,19 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 from scripts.data_processing import (
     load_and_preprocess_data,
     load_market_context,
     calculate_buying_opportunity_scores,
-    clear_all_caches,
 )
 from scripts.navigation import make_sidebar
-from scripts.theme import BANNER_BG, GREEN, RED, YELLOW, page_header
-from scripts.utils import render_refresh_status, run_subprocess_refresh
+from scripts.theme import (
+    BANNER_BG, GREEN, RED, YELLOW,
+    page_header, section_header, stat_card_grid, stat_card, progress_bar,
+    score_badge, html_table, grad_divider,
+)
+from scripts.utils import render_refresh_status
 
 st.set_page_config(layout="wide", page_title="Buying Opportunities", page_icon="💰")
 make_sidebar("Buying Opportunities")
@@ -34,14 +36,6 @@ if not stock_info.empty and "last_updated" in stock_info.columns:
 
 page_header("Buying Opportunities", icon="💰",
             subtitle="Data-driven scoring engine for re-buying and new positions")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 freshness_color = RED if last_updated == "Unknown" else (
     YELLOW if pd.to_datetime(last_updated, errors="coerce") < pd.Timestamp.now() - pd.Timedelta(days=7)
@@ -62,22 +56,49 @@ st.html(
 )
 
 # ----------------- MARKET CONTEXT STRIP ----------------- #
+st.html(section_header("Market Context", icon="🌡️"))
+
 vix = market_ctx.get("vix", 20.0)
 sp_perf = market_ctx.get("sp500_1mo_perf_pct", 0.0)
 sentiment = market_ctx.get("market_sentiment_score", 0.5)
 
-vix_color = RED if vix > 30 else (YELLOW if vix > 20 else GREEN)
-sp_color = GREEN if sp_perf >= 0 else RED
-sentiment_label = "Fearful (Buy Signal)" if sentiment > 0.6 else ("Neutral" if sentiment > 0.4 else "Greedy (Caution)")
+sentiment_label = (
+    "Fearful (Buy Signal)" if sentiment > 0.6
+    else ("Neutral" if sentiment > 0.4 else "Greedy (Caution)")
+)
 
-mc1, mc2, mc3 = st.columns(3)
-mc1.metric("VIX (Volatility)", f"{vix:.1f}", help="VIX > 30 = high fear = potential buying opportunity")
-mc2.metric("S&P 500 (1 Month)", f"{sp_perf:+.1f}%", delta=f"{sp_perf:+.1f}%",
-           help="S&P 500 return over the past month")
-mc3.metric("Market Sentiment Score", f"{sentiment:.2f} / 1.00",
-           help=f"Composite: {sentiment_label}. Higher = more fearful market = better buying conditions.")
+vix_positive = vix <= 20   # low VIX = calm market = green
+sp_positive  = sp_perf >= 0
+sent_positive = sentiment > 0.4  # fearful = buying opportunity
 
-st.divider()
+st.html(stat_card_grid([
+    {
+        "label":    "VIX (Volatility)",
+        "value":    f"{vix:.1f}",
+        "icon":     "📉",
+        "delta":    "High fear — buy signal" if vix > 30 else ("Elevated" if vix > 20 else "Calm"),
+        "positive": vix_positive,
+        "subtitle": "VIX > 30 = high fear = potential buying opportunity",
+    },
+    {
+        "label":    "S&P 500 (1 Month)",
+        "value":    f"{sp_perf:+.1f}%",
+        "icon":     "📊",
+        "delta":    f"{sp_perf:+.1f}%",
+        "positive": sp_positive,
+        "subtitle": "S&P 500 return over the past month",
+    },
+    {
+        "label":    "Market Sentiment Score",
+        "value":    f"{sentiment:.2f} / 1.00",
+        "icon":     "🌡️",
+        "delta":    sentiment_label,
+        "positive": sent_positive,
+        "subtitle": "Higher = more fearful market = better buying conditions",
+    },
+], cols=3))
+
+st.html(grad_divider())
 
 # ----------------- CASH INPUT + WEIGHT CONTROLS ----------------- #
 with st.expander("⚙️ Customize Scoring Weights", expanded=False):
@@ -116,7 +137,7 @@ with st.expander("⚙️ Customize Scoring Weights", expanded=False):
     else:
         st.success("Weights sum to 100% ✓")
 
-# Normalize weights so they always sum to 1
+# Normalize weights
 weight_sum = w_52wk + w_diversity + w_target + w_risk + w_sentiment + w_cash + w_rsi + w_pe
 if weight_sum > 0:
     w_52wk, w_diversity, w_target, w_risk, w_sentiment, w_cash, w_rsi, w_pe = (
@@ -124,8 +145,6 @@ if weight_sum > 0:
     )
 
 # ----------------- RE-SCORE WITH USER WEIGHTS ----------------- #
-# Re-run scoring live using cached stock data + user-configured weights.
-# This is fast (pure pandas) and avoids any extra yfinance calls.
 mss = market_ctx.get("market_sentiment_score", 0.5)
 
 rebuy_df = pd.DataFrame()
@@ -156,45 +175,50 @@ if (not stock_info.empty and not stocks.empty
 # ----------------- TABS ----------------- #
 tab1, tab2 = st.tabs(["🔄 Re-Buy (Current Portfolio)", "🔍 New Opportunities (Watchlist)"])
 
+# Column definitions for score breakdown table
+_SCORE_COLS = {
+    "stock":             "Ticker",
+    "company":           "Company",
+    "price":             "Price",
+    "52_week_high":      "52W High",
+    "discount_pct":      "Discount %",
+    "rsi_14":            "RSI (14d)",
+    "target_mean_price": "Target Price",
+    "score_52wk":        "52W Score",
+    "score_target":      "Target Score",
+    "score_rsi":         "RSI Score",
+    "score_pe":          "PE Score",
+    "score_diversity":   "Diversity Score",
+    "score_risk":        "Risk Score",
+    "score_sentiment":   "Sentiment Score",
+    "buy_score":         "Buy Score",
+}
+_SCORE_FMT = {
+    "Price":          "${:,.2f}",
+    "52W High":       "${:,.2f}",
+    "Target Price":   "${:,.2f}",
+    "Discount %":     "{:.1%}",
+    "RSI (14d)":      "{:.1f}",
+    "52W Score":      "{:.2f}",
+    "Target Score":   "{:.2f}",
+    "RSI Score":      "{:.2f}",
+    "PE Score":       "{:.2f}",
+    "Diversity Score":"{:.2f}",
+    "Risk Score":     "{:.2f}",
+    "Sentiment Score":"{:.2f}",
+    "Buy Score":      score_badge,   # callable — returns colored badge HTML
+}
+
 
 def render_score_breakdown(df: pd.DataFrame):
-    """Renders the detailed scoring breakdown table with all signal components."""
-    score_cols = {
-        "stock":          "Ticker",
-        "company":        "Company",
-        "price":          "Price",
-        "52_week_high":   "52W High",
-        "discount_pct":   "Discount %",
-        "rsi_14":         "RSI (14d)",
-        "target_mean_price": "Target Price",
-        "score_52wk":     "52W Score",
-        "score_target":   "Target Score",
-        "score_rsi":      "RSI Score",
-        "score_pe":       "PE Score",
-        "score_diversity": "Diversity Score",
-        "score_risk":     "Risk Score",
-        "score_sentiment": "Sentiment Score",
-        "buy_score":      "Buy Score",
-    }
-    valid = {k: v for k, v in score_cols.items() if k in df.columns}
-    display = df[list(valid.keys())].rename(columns=valid).copy()
-
-    fmt = {}
-    if "Price" in display.columns:        fmt["Price"] = "${:,.2f}"
-    if "52W High" in display.columns:     fmt["52W High"] = "${:,.2f}"
-    if "Target Price" in display.columns: fmt["Target Price"] = "${:,.2f}"
-    if "Discount %" in display.columns:   fmt["Discount %"] = "{:.1%}"
-    if "RSI (14d)" in display.columns:    fmt["RSI (14d)"] = "{:.1f}"
-    for score_col in ["52W Score", "Target Score", "RSI Score", "PE Score",
-                      "Diversity Score", "Risk Score", "Sentiment Score"]:
-        if score_col in display.columns:  fmt[score_col] = "{:.2f}"
-    if "Buy Score" in display.columns:    fmt["Buy Score"] = "{:.1f}"
-
-    styled = display.style.format(fmt)
-    if "Buy Score" in display.columns:
-        styled = styled.background_gradient(subset=["Buy Score"], cmap="RdYlGn", vmin=0, vmax=100)
-
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    """Render the detailed scoring breakdown as a styled fin-table."""
+    st.html(html_table(
+        df,
+        col_labels=_SCORE_COLS,
+        formatters=_SCORE_FMT,
+        pos_cols=["score_52wk", "score_target", "score_rsi"],
+        ticker_col="stock",
+    ))
 
 
 # ----------------- TAB 1: RE-BUY ----------------- #
@@ -202,26 +226,41 @@ with tab1:
     if rebuy_df is not None and not rebuy_df.empty:
 
         # Top 3 highlight cards
+        st.html(section_header("Top 3 Picks", icon="🏆"))
         top_picks = rebuy_df.head(3)
         card_cols = st.columns(3)
-        for i, (_, row) in enumerate(top_picks.iterrows()):
-            discount = row.get("discount_pct", 0)
-            score = row.get("buy_score", 0)
-            ticker = row.get("stock", "N/A")
-            company = row.get("company", "")
-            price = row.get("price", 0)
-            target = row.get("target_mean_price", 0)
-            upside_pct = ((target - price) / price * 100) if price > 0 else 0
-            with card_cols[i]:
-                st.metric(
-                    label=f"#{i + 1}: {ticker}" + (f" — {company}" if company else ""),
-                    value=f"{score:.0f} / 100",
-                    delta=f"{discount * 100:.1f}% off 52W high",
-                )
-                if upside_pct > 0:
-                    st.caption(f"Analyst target: ${target:,.2f} ({upside_pct:+.1f}% upside)")
+        icons = ["🥇", "🥈", "🥉"]
 
-        st.markdown("---")
+        for i, (_, row) in enumerate(top_picks.iterrows()):
+            discount  = row.get("discount_pct", 0)
+            score     = row.get("buy_score", 0)
+            ticker    = row.get("stock", "N/A")
+            company   = row.get("company", "")
+            price     = row.get("price", 0)
+            target    = row.get("target_mean_price", 0)
+            upside_pct = ((target - price) / price * 100) if price > 0 else 0
+
+            upside_html = ""
+            if upside_pct > 0:
+                upside_html = (
+                    f"<div style='margin-top:6px;font-size:0.8rem;color:#333;'>"
+                    f"Analyst target: ${target:,.2f} ({upside_pct:+.1f}% upside)</div>"
+                )
+
+            with card_cols[i]:
+                st.html(
+                    stat_card(
+                        label=f"#{i + 1}: {ticker}" + (f" — {company}" if company else ""),
+                        value=f"{score:.0f} / 100",
+                        delta=f"{discount * 100:.1f}% off 52W high",
+                        positive=(discount > 0),
+                        icon=icons[i],
+                    )
+                    + progress_bar(score, 100)
+                    + upside_html
+                )
+
+        st.html(grad_divider())
 
         # Bar chart
         fig = px.bar(
@@ -237,7 +276,7 @@ with tab1:
         fig.update_layout(coloraxis_showscale=False, xaxis_title=None)
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("Full Scoring Breakdown")
+        st.html(section_header("Full Scoring Breakdown", icon="📋"))
         render_score_breakdown(rebuy_df)
     else:
         st.info(
@@ -248,7 +287,7 @@ with tab1:
 # ----------------- TAB 2: WATCHLIST ----------------- #
 with tab2:
     if new_buy_df is not None and not new_buy_df.empty:
-        st.subheader("New Opportunities (Watchlist)")
+        st.html(section_header("New Opportunities (Watchlist)", icon="🔍"))
         render_score_breakdown(new_buy_df)
     else:
         st.warning(

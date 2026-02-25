@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import date
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
-from scripts.theme import BLUE, GREEN, RED, page_header
-from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.theme import (
+    BLUE, GREEN, RED,
+    page_header, section_header, stat_card_grid, html_table, grad_divider,
+)
+from scripts.utils import clean_amount_column, render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Budget Overview", page_icon="💸", layout="wide")
@@ -15,23 +18,14 @@ make_sidebar("Budget Overview")
 
 page_header("Budget Overview", icon="💸",
             subtitle="Monthly budget vs. actual spending across all categories")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_budget_data.py",
-            clear_all_caches,
-            "Processing Budget.xlsx...",
-        )
 
 render_refresh_status()
 
 # ----------------- DATA LOADING & CLEANING ----------------- #
 data = load_and_preprocess_data()
-income_df = data["income"].copy()
+income_df  = data["income"].copy()
 expenses_df = data["expenses"].copy()
 
-# Freshness badge — based on latest transaction date
 _budget_max_date = None
 if not expenses_df.empty and "date" in expenses_df.columns:
     _budget_max_date = pd.to_datetime(expenses_df["date"], errors="coerce").max()
@@ -40,26 +34,22 @@ elif not income_df.empty and "date" in income_df.columns:
 if _budget_max_date is not None:
     render_freshness_badge(_budget_max_date, label="Budget data through")
 
-# Standardize column names
 if "expense_category" in expenses_df.columns:
     expenses_df = expenses_df.rename(columns={"expense_category": "category"})
 if "source" in income_df.columns:
     income_df = income_df.rename(columns={"source": "category"})
 
-
-# Clean amounts
-income_df = clean_amount_column(income_df)
+income_df   = clean_amount_column(income_df)
 expenses_df = clean_amount_column(expenses_df)
 
-# Clean dates
-income_df["date"] = pd.to_datetime(income_df["date"], errors="coerce")
+income_df["date"]   = pd.to_datetime(income_df["date"],   errors="coerce")
 expenses_df["date"] = pd.to_datetime(expenses_df["date"], errors="coerce")
-income_df = income_df.dropna(subset=["date"])
+income_df   = income_df.dropna(subset=["date"])
 expenses_df = expenses_df.dropna(subset=["date"])
 
 # ----------------- FILTERS (TOP OF PAGE) ----------------- #
 with st.container():
-    st.subheader("Filters")
+    st.html(section_header("Filters", icon="🔍"))
     f_col1, f_col2 = st.columns(2)
 
     if not income_df.empty and not expenses_df.empty:
@@ -70,7 +60,7 @@ with st.container():
         max_date = date.today()
 
     default_start = max(min_date, date(date.today().year, 1, 1))
-    default_end = min(max_date, date.today())
+    default_end   = min(max_date, date.today())
 
     with f_col1:
         date_range = st.date_input(
@@ -127,8 +117,8 @@ chart_data["Savings_Rate"] = chart_data.apply(
 )
 
 # ----------------- MAIN CHART SECTION ----------------- #
-st.divider()
-st.subheader("Income vs. Expenses Trend")
+st.html(grad_divider())
+st.html(section_header("Income vs. Expenses Trend", icon="📈"))
 
 if not chart_data.empty:
     base_chart_data = chart_data.melt(
@@ -173,27 +163,59 @@ if not chart_data.empty:
 
     st.altair_chart(combined_chart, use_container_width=True)
 
-    st.markdown("### 📊 Snapshot (Selected Period)")
+    # Snapshot metrics
+    st.html(grad_divider())
+    st.html(section_header("Snapshot (Selected Period)", icon="📊"))
 
-    total_inc = chart_data["Income"].sum()
-    total_exp = chart_data["Expenses"].sum()
-    net_sav = total_inc - total_exp
+    total_inc  = chart_data["Income"].sum()
+    total_exp  = chart_data["Expenses"].sum()
+    net_sav    = total_inc - total_exp
     avg_sav_rate = (net_sav / total_inc * 100) if total_inc > 0 else 0.0
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total Income", f"${total_inc:,.2f}")
-    m2.metric("Total Expenses", f"${total_exp:,.2f}")
-    m3.metric("Net Savings", f"${net_sav:,.2f}")
-    m4.metric("Avg Savings Rate", f"{avg_sav_rate:.1f}%")
+    st.html(stat_card_grid([
+        {"label": "Total Income",    "value": f"${total_inc:,.2f}",     "icon": "💵"},
+        {"label": "Total Expenses",  "value": f"${total_exp:,.2f}",     "icon": "🧾", "positive": False},
+        {
+            "label": "Net Savings",
+            "value": f"${net_sav:,.2f}",
+            "icon": "🏦",
+            "delta": f"${net_sav:,.2f}",
+            "positive": net_sav >= 0,
+        },
+        {
+            "label": "Avg Savings Rate",
+            "value": f"{avg_sav_rate:.1f}%",
+            "icon": "📊",
+            "delta": f"{avg_sav_rate:.1f}%",
+            "positive": avg_sav_rate >= 0,
+        },
+    ], cols=4))
 
-    st.divider()
+    st.html(grad_divider())
 
     with st.expander("View Underlying Data"):
-        st.dataframe(
-            chart_data[["date", "Income", "Expenses", "Net_Savings", "Savings_Rate"]]
-                .sort_values("date", ascending=False)
-                .style.format(
-                {"Income": "${:,.2f}", "Expenses": "${:,.2f}", "Net_Savings": "${:,.2f}", "Savings_Rate": "{:.1%}"})
-        )
+        display_data = chart_data[["date", "Income", "Expenses", "Net_Savings", "Savings_Rate"]].sort_values(
+            "date", ascending=False
+        ).copy()
+        display_data["date"] = display_data["date"].dt.strftime("%b %Y")
+
+        st.html(html_table(
+            display_data,
+            col_labels={
+                "date":         "Month",
+                "Income":       "Income",
+                "Expenses":     "Expenses",
+                "Net_Savings":  "Net Savings",
+                "Savings_Rate": "Savings Rate",
+            },
+            formatters={
+                "Income":       "${:,.2f}",
+                "Expenses":     "${:,.2f}",
+                "Net Savings":  "${:,.2f}",
+                "Savings Rate": "{:.1%}",
+            },
+            pos_cols=["Net_Savings"],
+            neg_cols=["Expenses"],
+        ))
 else:
     st.info("No data available for the selected range.")

@@ -4,10 +4,13 @@ import pandas as pd
 import altair as alt
 import plotly.express as px
 from datetime import date, timedelta
-from scripts.data_processing import load_and_preprocess_data, clear_all_caches
+from scripts.data_processing import load_and_preprocess_data
 from scripts.navigation import make_sidebar
-from scripts.theme import GREEN, RED, page_header
-from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
+from scripts.theme import (
+    GREEN, RED,
+    page_header, section_header, stat_card_grid, html_table, grad_divider,
+)
+from scripts.utils import render_freshness_badge, render_refresh_status
 
 # ----------------- PAGE CONFIG ----------------- #
 st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wide")
@@ -17,14 +20,6 @@ make_sidebar("Portfolio Overview")
 
 page_header("Portfolio Overview", icon="📈",
             subtitle="Holdings value, cost basis, and performance over time")
-_, col_refresh = st.columns([5, 1])
-with col_refresh:
-    if st.button("🔄 Refresh Data", use_container_width=True):
-        run_subprocess_refresh(
-            "scripts/process_investment_data.py",
-            clear_all_caches,
-            "Fetching latest prices and fundamentals...",
-        )
 
 render_refresh_status()
 
@@ -42,7 +37,6 @@ if not daily_stocks.empty and "date" in daily_stocks.columns:
     render_freshness_badge(pd.to_datetime(daily_stocks["date"], errors="coerce").max(), label="Price history through")
 
 # ----------------- DATA CLEANING ----------------- #
-# The data loader converts columns to snake_case (e.g., Market_Value -> market_value)
 
 # 1. Market Value
 if "market_value" in stocks_complete.columns:
@@ -51,8 +45,6 @@ else:
     stocks_complete["market_value"] = 0.0
 
 # 2. True Cost Basis from daily_stocks (replayed transaction history)
-# daily_stocks.equity = total dollars deployed per ticker, adjusted for all buys and partial sells.
-# This is more accurate than quantity * avg_cost, which drifts when shares are sold.
 if not daily_stocks.empty and {"stock", "equity", "date"}.issubset(daily_stocks.columns):
     daily_stocks["date"] = pd.to_datetime(daily_stocks["date"], errors="coerce")
     latest_date = daily_stocks["date"].max()
@@ -66,7 +58,6 @@ if not daily_stocks.empty and {"stock", "equity", "date"}.issubset(daily_stocks.
     stocks_complete = pd.merge(stocks_complete, cost_basis, on="stock", how="left")
     stocks_complete["invested"] = pd.to_numeric(stocks_complete["true_cost_basis"], errors="coerce").fillna(0)
 else:
-    # Fallback: quantity * avg_cost if daily history is unavailable
     if "quantity" in stocks_complete.columns and "avg_cost" in stocks_complete.columns:
         stocks_complete["invested"] = (
             pd.to_numeric(stocks_complete["quantity"], errors="coerce").fillna(0) *
@@ -75,61 +66,63 @@ else:
     else:
         stocks_complete["invested"] = 0.0
 
-# 3. Equity Change (Profit/Loss) = current market value minus true cost basis
+# 3. Equity Change (Profit/Loss)
 stocks_complete["equity_change"] = stocks_complete["market_value"] - stocks_complete["invested"]
 
-# ----------------- SECTION 1: SUMMARY METRICS (2x3 GRID) ----------------- #
-st.subheader("At a Glance")
+# ----------------- SECTION 1: SUMMARY METRICS (2×3 GRID) ----------------- #
+st.html(section_header("At a Glance", icon="📊"))
 
 # Calculations
-total_value = stocks_complete["market_value"].sum()
+total_value    = stocks_complete["market_value"].sum()
 total_invested = stocks_complete["invested"].sum()
-roe_dollar = total_value - total_invested
+roe_dollar  = total_value - total_invested
 roe_percent = (roe_dollar / total_invested * 100) if total_invested > 0 else 0.0
 
-# Count active positions (quantity > 0)
 if "quantity" in stocks_complete.columns:
     num_companies = len(stocks_complete[stocks_complete["quantity"] > 0])
 else:
     num_companies = 0
 
-# Avg Dividend Yield (handle missing data)
 if "dividend_yield" in stocks_complete.columns:
-    avg_div_yield = stocks_complete["dividend_yield"].mean() * 100  # Convert dec to %
+    avg_div_yield = stocks_complete["dividend_yield"].mean() * 100
 else:
     avg_div_yield = 0.0
 
-# Row 1
-r1c1, r1c2, r1c3 = st.columns(3)
-r1c1.metric("Total Portfolio Value", f"${total_value:,.2f}")
-r1c2.metric("Amount Invested", f"${total_invested:,.2f}")
-r1c3.metric("Return on Equity ($)", f"${roe_dollar:,.2f}", delta=f"${roe_dollar:,.2f}")
-
-# Row 2
-r2c1, r2c2, r2c3 = st.columns(3)
-r2c1.metric("Rate of Return (%)", f"{roe_percent:.2f}%", delta=f"{roe_percent:.2f}%")
-r2c2.metric("Number of Companies", f"{num_companies}")
-r2c3.metric("Avg Dividend Yield", f"{avg_div_yield:.2f}%")
-
-st.markdown("---")
+st.html(stat_card_grid([
+    {"label": "Total Portfolio Value", "value": f"${total_value:,.2f}",    "icon": "💼"},
+    {"label": "Amount Invested",       "value": f"${total_invested:,.2f}", "icon": "💰"},
+    {
+        "label": "Return on Equity ($)",
+        "value": f"${roe_dollar:,.2f}",
+        "icon": "📈",
+        "delta": f"${roe_dollar:,.2f}",
+        "positive": roe_dollar >= 0,
+    },
+    {
+        "label": "Rate of Return (%)",
+        "value": f"{roe_percent:.2f}%",
+        "icon": "📊",
+        "delta": f"{roe_percent:.2f}%",
+        "positive": roe_percent >= 0,
+    },
+    {"label": "Number of Companies", "value": f"{num_companies}",      "icon": "🏢"},
+    {"label": "Avg Dividend Yield",  "value": f"{avg_div_yield:.2f}%", "icon": "💸"},
+], cols=3))
 
 # ----------------- SECTION 2: PORTFOLIO TREND (ALTAIR) ----------------- #
-st.subheader("📉 Portfolio Trend Over Time")
+st.html(grad_divider())
+st.html(section_header("Portfolio Trend Over Time", icon="📉"))
 
 if not daily_equity.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity.columns):
     chart_df = daily_equity.copy()
     chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
     chart_df = chart_df.sort_values("date")
 
-    # Altair chart
     chart = (
         alt.Chart(chart_df)
             .mark_line(point=True)
             .encode(
-            x=alt.X(
-                "date:T",
-                axis=alt.Axis(format="%b %y", title="Date"),
-            ),
+            x=alt.X("date:T", axis=alt.Axis(format="%b %y", title="Date")),
             y=alt.Y("market_value:Q", title="Portfolio Value"),
             color=alt.condition(
                 "datum.total_profit >= 0",
@@ -149,16 +142,13 @@ if not daily_equity.empty and {"date", "market_value", "total_profit"}.issubset(
 else:
     st.info("No portfolio history available yet.")
 
-st.markdown("---")
-
 # ----------------- SECTION 3: ASSET ALLOCATION (BAR GRAPH) ----------------- #
-st.subheader("🏆 Top Assets (Market Value vs. Return)")
+st.html(grad_divider())
+st.html(section_header("Top Assets (Market Value vs. Return)", icon="🏆"))
 
 if not stocks_complete.empty:
-    # Sort by Market Value
-    asset_chart_data = stocks_complete.sort_values("market_value", ascending=False).head(20)  # Top 20
+    asset_chart_data = stocks_complete.sort_values("market_value", ascending=False).head(20)
 
-    # Calculate Percent Return for color scale
     asset_chart_data["return_pct"] = asset_chart_data.apply(
         lambda x: ((x["market_value"] - x["invested"]) / x["invested"] * 100) if x["invested"] > 0 else 0,
         axis=1
@@ -169,8 +159,8 @@ if not stocks_complete.empty:
         x="stock",
         y="market_value",
         color="return_pct",
-        color_continuous_scale="RdYlGn",  # Red to Green
-        range_color=[-50, 50],  # Cap color scale at +/- 50% for visibility
+        color_continuous_scale="RdYlGn",
+        range_color=[-50, 50],
         title="Top Holdings by Value (Colored by % Return)",
         labels={"market_value": "Current Value ($)", "return_pct": "Return %", "stock": "Ticker"},
         hover_data={"invested": ":$,.2f", "market_value": ":$,.2f", "return_pct": ":.2f%"}
@@ -179,12 +169,10 @@ if not stocks_complete.empty:
     fig_assets.update_layout(xaxis_title=None)
     st.plotly_chart(fig_assets, use_container_width=True)
 
-st.markdown("---")
-
 # ----------------- SECTION 4: GAINERS / LOSERS (DYNAMIC TIME) ----------------- #
-st.subheader("🔥 Movers & Shakers")
+st.html(grad_divider())
+st.html(section_header("Movers & Shakers", icon="🔥"))
 
-# Date Range Selector
 time_frame = st.radio(
     "Calculate Performance Over:",
     ["1 Day", "1 Week", "1 Month", "3 Months", "1 Year", "YTD"],
@@ -192,7 +180,6 @@ time_frame = st.radio(
 )
 
 
-# Helper to calculate performance dataframe
 def get_performance_df(daily_df, days_lookback=None, is_ytd=False):
     if daily_df.empty:
         return pd.DataFrame()
@@ -207,10 +194,8 @@ def get_performance_df(daily_df, days_lookback=None, is_ytd=False):
     else:
         start_date = max_date - timedelta(days=days_lookback)
 
-    # Get Prices at End Date
     end_prices = daily_df[daily_df["date"] == max_date][["stock", "close"]].rename(columns={"close": "End_Price"})
 
-    # Get Prices nearest to Start Date (without going future)
     history_subset = daily_df[daily_df["date"] <= pd.Timestamp(start_date)]
     if history_subset.empty:
         history_subset = daily_df.copy()
@@ -219,23 +204,31 @@ def get_performance_df(daily_df, days_lookback=None, is_ytd=False):
     start_prices_raw = pd.merge(daily_df, latest_dates, on=["stock", "date"])
     start_prices = start_prices_raw[["stock", "close"]].rename(columns={"close": "Start_Price"})
 
-    # Merge
     perf_df = pd.merge(end_prices, start_prices, on="stock", how="inner")
-
-    # Calc Change
     perf_df["Abs_Change"] = perf_df["End_Price"] - perf_df["Start_Price"]
     perf_df["Pct_Change"] = (perf_df["Abs_Change"] / perf_df["Start_Price"]) * 100
 
     return perf_df
 
 
-# Logic for Lookback
 lookback_map = {
     "1 Day": 1,
     "1 Week": 7,
     "1 Month": 30,
     "3 Months": 90,
     "1 Year": 365
+}
+
+_MOVER_COLS = {
+    "stock":       "Ticker",
+    "Start_Price": "Start Price",
+    "End_Price":   "End Price",
+    "Pct_Change":  "% Change",
+}
+_MOVER_FMT = {
+    "Start Price": "${:,.2f}",
+    "End Price":   "${:,.2f}",
+    "% Change":    "{:+.2f}%",
 }
 
 if "daily_stocks" in data and not daily_stocks.empty:
@@ -248,34 +241,26 @@ if "daily_stocks" in data and not daily_stocks.empty:
         col_g, col_l = st.columns(2)
 
         with col_g:
-            st.write(f"**Top Gainers ({time_frame})**")
+            st.html(f"<div style='color:#333;font-weight:600;margin-bottom:6px;'>Top Gainers ({time_frame})</div>")
             gainers = perf_df.sort_values("Pct_Change", ascending=False).head(10)
-            st.dataframe(
-                gainers[["stock", "Start_Price", "End_Price", "Pct_Change"]]
-                    .style.format({
-                    "Start_Price": "${:,.2f}",
-                    "End_Price": "${:,.2f}",
-                    "Pct_Change": "{:+.2f}%"
-                })
-                    .background_gradient(subset=["Pct_Change"], cmap="Greens"),
-                use_container_width=True,
-                hide_index=True
-            )
+            st.html(html_table(
+                gainers,
+                col_labels=_MOVER_COLS,
+                formatters=_MOVER_FMT,
+                pos_cols=["Pct_Change"],
+                ticker_col="stock",
+            ))
 
         with col_l:
-            st.write(f"**Top Losers ({time_frame})**")
+            st.html(f"<div style='color:#333;font-weight:600;margin-bottom:6px;'>Top Losers ({time_frame})</div>")
             losers = perf_df.sort_values("Pct_Change", ascending=True).head(10)
-            st.dataframe(
-                losers[["stock", "Start_Price", "End_Price", "Pct_Change"]]
-                    .style.format({
-                    "Start_Price": "${:,.2f}",
-                    "End_Price": "${:,.2f}",
-                    "Pct_Change": "{:+.2f}%"
-                })
-                    .background_gradient(subset=["Pct_Change"], cmap="Reds_r"),
-                use_container_width=True,
-                hide_index=True
-            )
+            st.html(html_table(
+                losers,
+                col_labels=_MOVER_COLS,
+                formatters=_MOVER_FMT,
+                neg_cols=["Pct_Change"],
+                ticker_col="stock",
+            ))
     else:
         st.warning("Not enough historical data to calculate performance for this period.")
 else:

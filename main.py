@@ -6,7 +6,10 @@ import altair as alt
 
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
-from scripts.theme import GREEN, RED, page_header
+from scripts.theme import (
+    GREEN, RED,
+    page_header, section_header, stat_card_grid, grad_divider,
+)
 from scripts.utils import (
     calculate_average_monthly_total,
     calculate_yearly_total,
@@ -25,7 +28,6 @@ st.set_page_config(
 )
 
 # ----------------- INJECT SIDEBAR ----------------- #
-# This renders the centralized navigation
 make_sidebar("Home")
 
 # (shared CSS injected by page_header below)
@@ -49,8 +51,8 @@ if income_df.empty and expenses_df.empty and daily_stocks_df.empty:
         """
         ⚠️ **No data found.**
 
-        It looks like your data files are missing or empty. 
-        Please ensure your `Budget.xlsx` and `stock_dictionary.json` are in the `data/` folder, 
+        It looks like your data files are missing or empty.
+        Please ensure your `Budget.xlsx` and `stock_dictionary.json` are in the `data/` folder,
         then click the **Refresh** buttons below to process them.
         """
     )
@@ -83,49 +85,60 @@ page_header(
 )
 
 # ----------------- HIGH-LEVEL SNAPSHOT ----------------- #
-st.html('<div class="section-title">Today at a Glance</div>')
-top_col1, top_col2, top_col3, top_col4 = st.columns(4)
+st.html(section_header("Today at a Glance"))
 
-with top_col1:
-    st.metric("💵 Total Income (YTD)", f"${annual_income:,.2f}")
-    st.html('<span class="muted-label">From all tracked sources</span>')
-
-with top_col2:
-    st.metric("🧾 Total Expenses (YTD)", f"${annual_expenses:,.2f}")
-    st.html('<span class="muted-label">Across all categories</span>')
-
-with top_col3:
-    # Use delta to color the number green/red
-    sr_delta = f"{savings_rate:.1f}%" if savings_rate != 0 else None
-    st.metric("📊 Savings Rate", f"{savings_rate:.1f}%", delta=sr_delta)
-    st.html('<span class="muted-label">Income left after expenses</span>')
-
-with top_col4:
-    st.metric("💼 Portfolio Value", f"${total_portfolio_value:,.2f}")
-    st.html('<span class="muted-label">Latest market value</span>')
-
-st.markdown("")  # spacing
+st.html(stat_card_grid([
+    {
+        "label": "Total Income (YTD)",
+        "value": f"${annual_income:,.2f}",
+        "icon": "💵",
+        "subtitle": "From all tracked sources",
+    },
+    {
+        "label": "Total Expenses (YTD)",
+        "value": f"${annual_expenses:,.2f}",
+        "icon": "🧾",
+        "subtitle": "Across all categories",
+    },
+    {
+        "label": "Savings Rate",
+        "value": f"{savings_rate:.1f}%",
+        "icon": "📊",
+        "delta": f"{savings_rate:.1f}%",
+        "positive": savings_rate >= 0,
+        "subtitle": "Income left after expenses",
+    },
+    {
+        "label": "Portfolio Value",
+        "value": f"${total_portfolio_value:,.2f}",
+        "icon": "💼",
+        "subtitle": "Latest market value",
+    },
+], cols=4))
 
 # ----------------- BUDGET & INVESTMENT OVERVIEW SIDE-BY-SIDE ----------------- #
+st.html(grad_divider())
 left, right = st.columns(2)
 
 # ----- Budget Overview Column ----- #
 with left:
-    st.html('<div class="section-title">💸 Budget Overview</div>')
-    st.write(
-        """
-        Get a quick read on your cashflow:
-        - How much you're bringing in vs. spending
-        - What your average month looks like
-        - Whether your savings rate is trending in the right direction
-        """
-    )
+    st.html(section_header("Budget Overview", icon="💸"))
+    st.html("""
+    <div style='color:#333;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
+      Get a quick read on your cashflow:
+      <ul style='margin:4px 0;padding-left:18px;'>
+        <li>How much you're bringing in vs. spending</li>
+        <li>What your average month looks like</li>
+        <li>Whether your savings rate is trending in the right direction</li>
+      </ul>
+    </div>
+    """)
 
-    b1, b2 = st.columns(2)
-    with b1:
-        st.metric("Avg Monthly Income", f"${avg_monthly_income:,.2f}")
-    with b2:
-        st.metric("Avg Monthly Expenses", f"${avg_monthly_expenses:,.2f}")
+    st.html(stat_card_grid([
+        {"label": "Avg Monthly Income",   "value": f"${avg_monthly_income:,.2f}",   "icon": "📥"},
+        {"label": "Avg Monthly Expenses", "value": f"${avg_monthly_expenses:,.2f}", "icon": "📤",
+         "positive": avg_monthly_income >= avg_monthly_expenses},
+    ], cols=2))
 
     st.html(f"<span class='muted-label'>Budget data last refreshed: {last_expenses_refresh}</span>")
 
@@ -138,24 +151,28 @@ with left:
 
 # ----- Investments Overview Column ----- #
 with right:
-    st.html('<div class="section-title">📈 Investments Overview</div>')
-    st.write(
-        """
-        See how your investments are performing overall:
-        - Current portfolio value vs. amount invested
-        - Total profit or loss across accounts
-        """
-    )
+    st.html(section_header("Investments Overview", icon="📈"))
+    st.html("""
+    <div style='color:#333;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
+      See how your investments are performing overall:
+      <ul style='margin:4px 0;padding-left:18px;'>
+        <li>Current portfolio value vs. amount invested</li>
+        <li>Total profit or loss across accounts</li>
+      </ul>
+    </div>
+    """)
 
-    i1, i2, i3 = st.columns(3)
-    with i1:
-        st.metric("Portfolio Value", f"${total_portfolio_value:,.2f}")
-    with i2:
-        st.metric("Total Equity (Invested)", f"${total_equity:,.2f}")
-    with i3:
-        # Use delta to color profit/loss green/red
-        pl_delta = f"${total_profit:,.2f}" if total_profit != 0 else None
-        st.metric("Total Profit / Loss", f"${total_profit:,.2f}", delta=pl_delta)
+    st.html(stat_card_grid([
+        {"label": "Portfolio Value",       "value": f"${total_portfolio_value:,.2f}", "icon": "💼"},
+        {"label": "Total Equity (Invested)", "value": f"${total_equity:,.2f}",        "icon": "💰"},
+        {
+            "label": "Total Profit / Loss",
+            "value": f"${total_profit:,.2f}",
+            "icon": "📊",
+            "delta": f"${total_profit:,.2f}",
+            "positive": total_profit >= 0,
+        },
+    ], cols=3))
 
     st.html(f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>")
 
@@ -182,14 +199,14 @@ with right:
     st.caption("Incremental: updates prices for today. Full Rebuild: re-fetches all history (fixes corrupt data).")
 
 # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
-st.html('<div class="section-title">📉 Portfolio Trend Over Time</div>')
+st.html(grad_divider())
+st.html(section_header("Portfolio Trend Over Time", icon="📉"))
 
 if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
     chart_df = daily_equity_df.copy()
     chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
     chart_df = chart_df.dropna(subset=["date"]).sort_values("date")
 
-    # Altair chart with month-year x-axis and profit in tooltip, color by profit sign
     chart = (
         alt.Chart(chart_df)
             .mark_line(point=True)
@@ -219,7 +236,7 @@ else:
     st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
 
 # ----------------- FOOTER ----------------- #
-st.markdown("---")
+st.html(grad_divider())
 st.write(
     "🔍 **Next step:** Use the sidebar to dive into Budget or Investments and start exploring the details."
 )
