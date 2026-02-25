@@ -68,17 +68,6 @@ _HERO_GRADIENT = "linear-gradient(135deg, #1b5e20 0%, #2e7d32 45%, #00695c 100%)
 
 _BASE_CSS = f"""
 <style>
-/* ── Force dark page background ── */
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-section[data-testid="stSidebar"] {{
-    background-color: {DARK_BG} !important;
-}}
-[data-testid="stHeader"] {{
-    background-color: {DARK_BG} !important;
-}}
-
 /* ── Hero header ── */
 .hero-container {{
     padding: 1.5rem 1.75rem;
