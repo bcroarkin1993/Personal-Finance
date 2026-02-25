@@ -182,15 +182,13 @@ The current schema has no concept of owner, card, or account on individual trans
 
 ---
 
-### 5. Testing Framework (was §4)
+### 5. Testing Framework (was §4) ✅ *Completed — merged to main*
 
-There are currently zero automated tests.
+- [x] **Add pytest tests for `scripts/utils.py`.** 32 tests in `tests/test_utils.py` covering `clean_amount_column` (dollar signs, commas, accounting parens), `calculate_average_monthly_total` (empty input, prior-year exclusion, multi-month averaging), `calculate_yearly_total`, and `get_portfolio_snapshot` (latest-row selection, out-of-order dates).
+- [x] **Add pytest tests for `scripts/data_processing.py` (non-Streamlit parts).** 30 tests in `tests/test_data_processing.py` covering `safe_read_csv` (missing/empty/normal files, all schema keys), `calculate_buying_opportunity_scores` (all 8 signals, weight customisation, edge cases), and `preprocess_data` (merge logic, RSI computation, zero-qty filter). Streamlit stubbed via `tests/conftest.py` so tests run without a server.
+- [x] **Add a data integrity smoke test.** 19 tests in `tests/test_data_integrity.py` against real CSVs. Uses 1% relative tolerance for floating-point checks. Caught a real data issue: `income.csv` has a typo date `2108-12-21` — fix in `Budget.xlsx` and re-run `process_budget_data.py`.
 
-- [ ] **Add pytest tests for `scripts/utils.py`.** The financial helpers (`calculate_average_monthly_total`, `calculate_yearly_total`, `get_portfolio_snapshot`) are pure functions with no Streamlit dependency and are the highest-value starting point for tests. Create `tests/test_utils.py` with small synthetic DataFrames covering normal cases, empty inputs, and malformed amount strings (e.g., `"$1,234.56"`, `"(500.00)"`).
-
-- [ ] **Add pytest tests for `scripts/data_processing.py` (non-Streamlit parts).** `preprocess_data`, `calculate_buying_opportunity_scores`, and `safe_read_csv` can all be tested without a running Streamlit server. Create `tests/test_data_processing.py` with fixture DataFrames that exercise the merge logic, the empty-state early-return path, and the buying score computation.
-
-- [ ] **Add a data integrity smoke test.** Create `tests/test_data_integrity.py` that loads the real CSVs from `data/` and asserts basic sanity: no negative quantities in `stocks.csv`, no future dates, `market_value` equals `close × shares_held` within a small tolerance in `daily_stocks.csv`, and income/expense amounts are all positive.
+Run with: `venv/bin/python -m pytest tests/ -v`
 
 ---
 
