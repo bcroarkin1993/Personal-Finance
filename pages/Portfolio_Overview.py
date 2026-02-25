@@ -249,7 +249,7 @@ if "daily_stocks" in data and not daily_stocks.empty:
         col_g, col_l = st.columns(2)
 
         with col_g:
-            st.html(f"<div style='color:#a5d6a7;font-weight:600;margin-bottom:6px;'>Top Gainers ({time_frame})</div>")
+            st.html(f"<div style='color:#00c853;font-weight:600;margin-bottom:6px;'>Top Gainers ({time_frame})</div>")
             gainers = perf_df.sort_values("Pct_Change", ascending=False).head(10)
             st.html(html_table(
                 gainers,
@@ -260,7 +260,7 @@ if "daily_stocks" in data and not daily_stocks.empty:
             ))
 
         with col_l:
-            st.html(f"<div style='color:#a5d6a7;font-weight:600;margin-bottom:6px;'>Top Losers ({time_frame})</div>")
+            st.html(f"<div style='color:#00c853;font-weight:600;margin-bottom:6px;'>Top Losers ({time_frame})</div>")
             losers = perf_df.sort_values("Pct_Change", ascending=True).head(10)
             st.html(html_table(
                 losers,

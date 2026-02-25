@@ -124,7 +124,7 @@ left, right = st.columns(2)
 with left:
     st.html(section_header("Budget Overview", icon="💸"))
     st.html("""
-    <div style='color:#a5d6a7;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
+    <div style='color:#388e3c;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
       Get a quick read on your cashflow:
       <ul style='margin:4px 0;padding-left:18px;'>
         <li>How much you're bringing in vs. spending</li>
@@ -153,7 +153,7 @@ with left:
 with right:
     st.html(section_header("Investments Overview", icon="📈"))
     st.html("""
-    <div style='color:#a5d6a7;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
+    <div style='color:#388e3c;font-size:0.88rem;line-height:1.7;margin-bottom:8px;'>
       See how your investments are performing overall:
       <ul style='margin:4px 0;padding-left:18px;'>
         <li>Current portfolio value vs. amount invested</li>

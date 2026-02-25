@@ -68,6 +68,17 @@ _HERO_GRADIENT = "linear-gradient(135deg, #1b5e20 0%, #2e7d32 45%, #00695c 100%)
 
 _BASE_CSS = f"""
 <style>
+/* ── Force dark page background ── */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+section[data-testid="stSidebar"] {{
+    background-color: {DARK_BG} !important;
+}}
+[data-testid="stHeader"] {{
+    background-color: {DARK_BG} !important;
+}}
+
 /* ── Hero header ── */
 .hero-container {{
     padding: 1.5rem 1.75rem;
@@ -116,12 +127,13 @@ div[data-testid="metric-container"] > div {{
 .section-title {{
     font-size: 1.2rem;
     font-weight: 600;
+    color: {GREEN_VIVID};
     margin-top: 0.75rem;
     margin-bottom: 0.25rem;
 }}
 .muted-label {{
     font-size: 0.8rem;
-    opacity: 0.7;
+    color: {GREEN_MEDIUM};
 }}
 
 /* ── Stat cards ── */
@@ -189,9 +201,15 @@ div[data-testid="metric-container"] > div {{
 .badge-teal   {{ background: #004d40;  color: #80cbc4; }}
 
 /* ── Section headers ── */
-.sec-header {{ border-left: 4px solid {GREEN_VIVID}; padding-left: 12px; margin: 18px 0 10px 0; }}
-.sec-header-title {{ color: #fff; font-size: 1.1rem; font-weight: 700; }}
-.sec-header-sub   {{ color: {GREEN_LIGHT}; font-size: 0.82rem; margin-top: 2px; }}
+.sec-header {{
+    border-left: 4px solid {GREEN_VIVID};
+    padding: 8px 12px;
+    margin: 18px 0 10px 0;
+    background: rgba(0,200,83,0.08);
+    border-radius: 0 6px 6px 0;
+}}
+.sec-header-title {{ color: {GREEN_VIVID}; font-size: 1.1rem; font-weight: 700; }}
+.sec-header-sub   {{ color: {GREEN_MEDIUM}; font-size: 0.82rem; margin-top: 2px; }}
 
 /* ── Progress bar ── */
 .prog-bg   {{ background: #1b2a1d; border-radius: 999px; height: 8px; }}
@@ -414,7 +432,7 @@ def html_table(
     # Only keep columns that actually exist
     valid = {k: v for k, v in col_labels.items() if k in df.columns}
     if not valid:
-        return "<p style='color:#a5d6a7;'>No data to display.</p>"
+        return "<p style='color:#388e3c;'>No data to display.</p>"
 
     subset = df[list(valid.keys())].copy()
     subset = subset.rename(columns=valid)

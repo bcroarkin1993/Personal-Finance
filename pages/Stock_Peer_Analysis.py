@@ -26,7 +26,7 @@ with col_refresh:
 render_refresh_status()
 
 st.html("""
-<div style='color:#a5d6a7;font-size:0.9rem;margin-bottom:8px;'>
+<div style='color:#388e3c;font-size:0.9rem;margin-bottom:8px;'>
   Compare your holdings against each other over different time horizons.
   Prices are normalized so they all start at 1, making relative performance easy to see.
 </div>

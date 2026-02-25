@@ -252,7 +252,7 @@ with tab1:
             upside_html = ""
             if upside_pct > 0:
                 upside_html = (
-                    f"<div style='margin-top:6px;font-size:0.8rem;color:#a5d6a7;'>"
+                    f"<div style='margin-top:6px;font-size:0.8rem;color:#388e3c;'>"
                     f"Analyst target: ${target:,.2f} ({upside_pct:+.1f}% upside)</div>"
                 )
 

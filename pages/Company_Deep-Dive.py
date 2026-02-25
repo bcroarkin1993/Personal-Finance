@@ -102,7 +102,7 @@ with col_profile:
     st.html(f"""
     <div style='background:#0d1f12;border:1px solid #1b5e20;border-radius:10px;padding:14px 18px;margin-bottom:8px;'>
       <div style='color:#fff;font-size:1.6rem;font-weight:700;'>{selected_ticker}</div>
-      <div style='color:#a5d6a7;font-size:0.85rem;margin-top:2px;'>{sector} | {industry}</div>
+      <div style='color:#388e3c;font-size:0.85rem;margin-top:2px;'>{sector} | {industry}</div>
     </div>
     """)
 
