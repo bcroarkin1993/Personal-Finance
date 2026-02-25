@@ -178,7 +178,7 @@ The current schema has no concept of owner, card, or account on individual trans
 
 ### 4. App-Wide Data Freshness ✅ *Completed — merged to main*
 
-- [x] **Refresh buttons on every page.** All 9 pages now have a Refresh button via `run_subprocess_refresh()`. Investment pages trigger `process_investment_data.py`; budget pages trigger `process_budget_data.py`.
+- [x] **Refresh buttons consolidated to Home page.** Originally on all 9 pages; later streamlined so only `main.py` hosts the Refresh Budget / Refresh Investment / Full Rebuild buttons. All other pages call `render_refresh_status()` so status messages persist across navigation. Investment pages trigger `process_investment_data.py`; budget pages trigger `process_budget_data.py`.
 - [x] **Persistent refresh status messages.** `render_refresh_status()` in `scripts/utils.py` uses `st.session_state` to survive `st.rerun()`. Every page calls it so success/warning/error is always visible.
 - [x] **Absolute script paths.** `run_subprocess_refresh()` resolves paths via `_PROJECT_ROOT` so it works regardless of the directory Streamlit was launched from.
 - [x] **Full Rebuild button on Home page.** Passes `--full` to `process_investment_data.py` to reprocess all historical data from 2016.
@@ -224,3 +224,19 @@ Run with: `venv/bin/python -m pytest tests/ -v`
 - [x] **Document the data refresh workflow.** Incremental vs. `--full`, when to run each script, and how UI Refresh buttons map to the same scripts.
 - [x] **Add a page-by-page user guide.** All 9 pages documented including Buying Opportunities signal table and Holdings Leaderboard logo instructions.
 - [ ] **Document the three-scope budget model.** Blocked on §2 (Multi-Person Budget Tracking) — will add once `person`/`card` columns are implemented.
+
+---
+
+### 9. UI Upgrade — Dark Green Trading Terminal Aesthetic ✅ *Completed — merged to main*
+
+- [x] **Extended green palette.** `scripts/theme.py` now exports `GREEN_VIVID` (#00c853), `GREEN_DARK` (#1b5e20), `GREEN_MEDIUM` (#388e3c), `GREEN_LIGHT` (#a5d6a7), `GREEN_TEAL` (#00897b), `GREEN_CARD_BG` (#0d1f12), `GREEN_STRIPE` (#112218), and `GREEN_PIE_PALETTE` (7-color sequence for Plotly charts).
+- [x] **Hero gradient updated.** Page header gradient changed from navy-blue to forest-green (`#1b5e20 → #2e7d32 → #00695c`).
+- [x] **Component library in `scripts/theme.py`.** Eight new functions: `stat_card`, `stat_card_grid`, `badge`, `score_badge`, `section_header`, `progress_bar`, `grad_divider`, `html_table`. All return HTML strings rendered via `st.html()`.
+- [x] **Stat card grids replace `st.metric()`.** Home page top row (4 cards), budget averages (2 cards), investment summary (3 cards), Portfolio Overview (2×3 grid), Buying Opportunities market context (3 cards), Expenses/Income/Budget Overview snapshot rows — all use `stat_card_grid()`.
+- [x] **Styled HTML tables replace `st.dataframe()`.** `html_table()` renders deep-green headers, alternating dark-stripe rows, teal ticker badge pills, and green/red cell coloring for positive/negative values. Used on Portfolio Overview gainers/losers, Buying Opportunities score breakdown, Expenses/Income transaction logs, and Budget Overview underlying data.
+- [x] **Score badges on Buying Opportunities.** Buy Score column uses `score_badge()`: green pill ≥ 70, yellow 40–69, red < 40. Top-3 pick cards include a gradient progress bar via `progress_bar()`.
+- [x] **Section headers replace `st.subheader()`.** `section_header()` renders a vivid-green left border, subtle green-tinted background, and dark-green title text — readable on any page background.
+- [x] **Gradient dividers replace `st.divider()` / `st.markdown("---")`.** `grad_divider()` renders a green→teal→transparent horizontal rule.
+- [x] **Green pie/treemap palette.** All Plotly pie charts and the Industry treemap use `GREEN_PIE_PALETTE`; treemap color scale changed from `Blues` to `Greens`.
+- [x] **Light theme with green accent.** `.streamlit/config.toml` sets `base="light"`, `primaryColor="#00c853"` so Streamlit's interactive elements (buttons, sliders, radio buttons) match the palette.
+- [x] **Text color fixes for light background.** Section header titles use `#2e7d32` (dark forest green); plain descriptive text uses `#333` (black); light-colored text (`#a5d6a7`) only appears inside components that have their own dark card background.
