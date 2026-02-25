@@ -6,6 +6,7 @@ import altair as alt
 
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import GREEN, RED, page_header
 from scripts.utils import (
     calculate_average_monthly_total,
     calculate_yearly_total,
@@ -27,71 +28,7 @@ st.set_page_config(
 # This renders the centralized navigation
 make_sidebar("Home")
 
-# ----------------- CUSTOM STYLING ----------------- #
-st.markdown(
-    """
-    <style>
-    /* Hero gradient background */
-    .hero-container {
-        padding: 1.5rem 1.75rem;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 40%, #3b8d99 100%);
-        color: white;
-        margin-bottom: 0.75rem;
-    }
-    .hero-title {
-        font-size: 2.1rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    .hero-subtitle {
-        font-size: 1rem;
-        opacity: 0.9;
-        margin-top: 0.25rem;
-    }
-    .hero-pill {
-        display: inline-block;
-        padding: 0.15rem 0.7rem;
-        border-radius: 999px;
-        background-color: rgba(255,255,255,0.12);
-        font-size: 0.8rem;
-        margin-bottom: 0.5rem;
-    }
-
-    /* Metric cards */
-    div[data-testid="metric-container"] {
-        background-color: #0b1621;
-        padding: 10px 14px;
-        border-radius: 14px;
-        border: 1px solid #243447;
-    }
-    div[data-testid="metric-container"] > label > div {
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    div[data-testid="metric-container"] > div {
-        font-size: 0.95rem;
-        font-weight: 600;
-        overflow-wrap: anywhere;
-    }
-
-    /* Section titles */
-    .section-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-top: 0.75rem;
-        margin-bottom: 0.25rem;
-    }
-
-    /* Small label text */
-    .muted-label {
-        font-size: 0.8rem;
-        opacity: 0.7;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# (shared CSS injected by page_header below)
 
 # ----------------- HOME PAGE LOGIC ----------------- #
 
@@ -139,40 +76,33 @@ total_profit = portfolio_snapshot["total_profit"]
 last_investment_refresh = get_last_refresh_date_from_df(daily_stocks_df, "date")
 
 # ----------------- HERO SECTION ----------------- #
-st.markdown(
-    """
-    <div class="hero-container">
-        <div class="hero-pill">Dashboard Overview</div>
-        <div class="hero-title">Personal Finance Command Center</div>
-        <div class="hero-subtitle">
-            High-level snapshot of your budget and investments in one place.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
+page_header(
+    "Personal Finance Command Center",
+    subtitle="High-level snapshot of your budget and investments in one place.",
+    pills=["Dashboard Overview"],
 )
 
 # ----------------- HIGH-LEVEL SNAPSHOT ----------------- #
-st.markdown('<div class="section-title">Today at a Glance</div>', unsafe_allow_html=True)
+st.html('<div class="section-title">Today at a Glance</div>')
 top_col1, top_col2, top_col3, top_col4 = st.columns(4)
 
 with top_col1:
     st.metric("💵 Total Income (YTD)", f"${annual_income:,.2f}")
-    st.markdown('<span class="muted-label">From all tracked sources</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">From all tracked sources</span>')
 
 with top_col2:
     st.metric("🧾 Total Expenses (YTD)", f"${annual_expenses:,.2f}")
-    st.markdown('<span class="muted-label">Across all categories</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Across all categories</span>')
 
 with top_col3:
     # Use delta to color the number green/red
     sr_delta = f"{savings_rate:.1f}%" if savings_rate != 0 else None
     st.metric("📊 Savings Rate", f"{savings_rate:.1f}%", delta=sr_delta)
-    st.markdown('<span class="muted-label">Income left after expenses</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Income left after expenses</span>')
 
 with top_col4:
     st.metric("💼 Portfolio Value", f"${total_portfolio_value:,.2f}")
-    st.markdown('<span class="muted-label">Latest market value</span>', unsafe_allow_html=True)
+    st.html('<span class="muted-label">Latest market value</span>')
 
 st.markdown("")  # spacing
 
@@ -181,7 +111,7 @@ left, right = st.columns(2)
 
 # ----- Budget Overview Column ----- #
 with left:
-    st.markdown('<div class="section-title">💸 Budget Overview</div>', unsafe_allow_html=True)
+    st.html('<div class="section-title">💸 Budget Overview</div>')
     st.write(
         """
         Get a quick read on your cashflow:
@@ -197,10 +127,7 @@ with left:
     with b2:
         st.metric("Avg Monthly Expenses", f"${avg_monthly_expenses:,.2f}")
 
-    st.markdown(
-        f"<span class='muted-label'>Budget data last refreshed: {last_expenses_refresh}</span>",
-        unsafe_allow_html=True,
-    )
+    st.html(f"<span class='muted-label'>Budget data last refreshed: {last_expenses_refresh}</span>")
 
     if st.button("🔄 Refresh Budget Data"):
         run_subprocess_refresh(
@@ -211,7 +138,7 @@ with left:
 
 # ----- Investments Overview Column ----- #
 with right:
-    st.markdown('<div class="section-title">📈 Investments Overview</div>', unsafe_allow_html=True)
+    st.html('<div class="section-title">📈 Investments Overview</div>')
     st.write(
         """
         See how your investments are performing overall:
@@ -230,10 +157,7 @@ with right:
         pl_delta = f"${total_profit:,.2f}" if total_profit != 0 else None
         st.metric("Total Profit / Loss", f"${total_profit:,.2f}", delta=pl_delta)
 
-    st.markdown(
-        f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>",
-        unsafe_allow_html=True,
-    )
+    st.html(f"<span class='muted-label'>Investment data last refreshed: {last_investment_refresh}</span>")
 
     b_incr, b_full = st.columns(2)
     with b_incr:
@@ -258,7 +182,7 @@ with right:
     st.caption("Incremental: updates prices for today. Full Rebuild: re-fetches all history (fixes corrupt data).")
 
 # ----------------- PORTFOLIO TREND (BOTTOM, FULL WIDTH) ----------------- #
-st.markdown('<div class="section-title">📉 Portfolio Trend Over Time</div>', unsafe_allow_html=True)
+st.html('<div class="section-title">📉 Portfolio Trend Over Time</div>')
 
 if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubset(daily_equity_df.columns):
     chart_df = daily_equity_df.copy()
@@ -277,8 +201,8 @@ if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubs
             y=alt.Y("market_value:Q", title="Portfolio Value"),
             color=alt.condition(
                 "datum.total_profit >= 0",
-                alt.value("#2ecc71"),  # green
-                alt.value("#e74c3c"),  # red
+                alt.value(GREEN),
+                alt.value(RED),
             ),
             tooltip=[
                 alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),
@@ -290,10 +214,7 @@ if not daily_equity_df.empty and {"date", "market_value", "total_profit"}.issubs
     )
 
     st.altair_chart(chart, use_container_width=True)
-    st.markdown(
-        "<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>",
-        unsafe_allow_html=True,
-    )
+    st.html("<span class='muted-label'>Color reflects profit (green) or loss (red) at each point in time.</span>")
 else:
     st.info("No portfolio history available yet. Once you have daily data, a trend chart will appear here.")
 

@@ -6,6 +6,7 @@ import plotly.express as px
 from datetime import date, timedelta
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import GREEN, RED, page_header
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -14,11 +15,10 @@ st.set_page_config(page_title="Portfolio Overview", page_icon="📈", layout="wi
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Portfolio Overview")
 
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("📈 Portfolio Overview")
+page_header("Portfolio Overview", icon="📈",
+            subtitle="Holdings value, cost basis, and performance over time")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",
@@ -133,8 +133,8 @@ if not daily_equity.empty and {"date", "market_value", "total_profit"}.issubset(
             y=alt.Y("market_value:Q", title="Portfolio Value"),
             color=alt.condition(
                 "datum.total_profit >= 0",
-                alt.value("#2ecc71"),  # green
-                alt.value("#e74c3c"),  # red
+                alt.value(GREEN),
+                alt.value(RED),
             ),
             tooltip=[
                 alt.Tooltip("date:T", title="Date", format="%b %d, %Y"),

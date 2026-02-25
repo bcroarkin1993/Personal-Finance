@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from scripts.data_processing import load_and_preprocess_data, clear_all_caches
 from scripts.navigation import make_sidebar
+from scripts.theme import page_header
 from scripts.utils import render_freshness_badge, render_refresh_status, run_subprocess_refresh
 
 # ----------------- PAGE CONFIG ----------------- #
@@ -11,12 +12,10 @@ st.set_page_config(page_title="Industry & Sector Breakdown", page_icon="🧭", l
 # ----------------- INJECT SIDEBAR ----------------- #
 make_sidebar("Industry & Sector Breakdown")
 
-# ----------------- HEADER ----------------- #
-col_title, col_refresh = st.columns([4, 1])
-with col_title:
-    st.title("🧭 Industry & Sector Breakdown")
+page_header("Industry & Sector Breakdown", icon="🧭",
+            subtitle="Portfolio allocation by sector, industry, and market cap")
+_, col_refresh = st.columns([5, 1])
 with col_refresh:
-    st.markdown("<div style='padding-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 Refresh Data", use_container_width=True):
         run_subprocess_refresh(
             "scripts/process_investment_data.py",

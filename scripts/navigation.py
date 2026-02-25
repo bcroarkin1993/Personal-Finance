@@ -26,15 +26,14 @@ def make_sidebar(current_page_id):
     """
 
     # 1. HIDE DEFAULT STREAMLIT SIDEBAR
-    st.markdown(
+    st.html(
         """
         <style>
         [data-testid="stSidebarNav"] {
             display: none;
         }
         </style>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     # 2. INITIALIZE SESSION STATE

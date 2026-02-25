@@ -52,12 +52,11 @@ def render_freshness_badge(date_val, label: str = "Data last updated") -> None:
     else:
         color, note = "#e74c3c", f"{int(age)}d ago — refresh recommended"
 
-    st.markdown(
+    st.html(
         f"<div style='font-size:0.82rem; margin-bottom:6px;'>"
         f"{label}: <span style='color:{color}; font-weight:600;'>{date_str}</span>"
         f" <span style='color:{color}; opacity:0.85;'>({note})</span>"
-        f"</div>",
-        unsafe_allow_html=True,
+        f"</div>"
     )
 
 
