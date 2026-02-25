@@ -255,15 +255,36 @@ def create_daily_stock_table(stock_dictionary, csv_path, full_refresh=False):
         combined = combined.drop_duplicates(subset=["Date", "Stock"], keep="last")
         combined = combined[combined["Shares_Held"] > 0]
         combined = combined.sort_values(by=["Stock", "Date"])
-        combined["Daily_Profit"] = combined.groupby("Stock")["Total_Profit"].diff().fillna(0)
-        combined["Daily_Pct_Profit"] = combined.groupby("Stock")["Close"].pct_change().fillna(0) * 100
-        return combined
     else:
-        if not new_df.empty:
-            new_df = new_df.sort_values(by=["Stock", "Date"])
-            new_df["Daily_Profit"] = new_df.groupby("Stock")["Total_Profit"].diff().fillna(0)
-            new_df["Daily_Pct_Profit"] = new_df.groupby("Stock")["Close"].pct_change().fillna(0) * 100
-        return new_df
+        if new_df.empty:
+            return new_df
+        combined = new_df.sort_values(by=["Stock", "Date"])
+
+    # Forward-fill any active tickers that are missing the latest market date.
+    # This happens when Yahoo Finance hasn't published a ticker's close yet —
+    # without this, the portfolio total for "today" is understated by the
+    # missing tickers' entire market value.
+    latest_date = combined["Date"].max()
+    tickers_on_latest = set(combined[combined["Date"] == latest_date]["Stock"])
+    all_tickers = set(combined["Stock"].unique())
+    missing_latest = all_tickers - tickers_on_latest
+    if missing_latest:
+        fill_rows = []
+        for ticker in missing_latest:
+            last_row = combined[combined["Stock"] == ticker].iloc[-1].copy()
+            last_row["Date"] = latest_date
+            last_row["Daily_Profit"] = 0.0
+            last_row["Daily_Pct_Profit"] = 0.0
+            fill_rows.append(last_row)
+        fill_df = pd.DataFrame(fill_rows)
+        combined = pd.concat([combined, fill_df], ignore_index=True)
+        combined = combined.sort_values(by=["Stock", "Date"])
+        print(f"     Forward-filled {len(missing_latest)} ticker(s) to {latest_date.date()}: "
+              f"{sorted(missing_latest)}")
+
+    combined["Daily_Profit"] = combined.groupby("Stock")["Total_Profit"].diff().fillna(0)
+    combined["Daily_Pct_Profit"] = combined.groupby("Stock")["Close"].pct_change().fillna(0) * 100
+    return combined
 
 
 def build_summary_dataframe(stock_dictionary, daily_df: pd.DataFrame) -> pd.DataFrame:
